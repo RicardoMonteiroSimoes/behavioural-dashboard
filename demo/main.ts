@@ -151,35 +151,44 @@ function createEngine(
   return e;
 }
 
+// --- DOM helpers ---
+
+function getEl(id: string): HTMLElement {
+  const el = document.getElementById(id);
+  if (!el) throw new Error(`Missing DOM element: #${id}`);
+  return el;
+}
+
 // DOM refs
-const gridEl = document.getElementById('grid')!;
-const statusEl = document.getElementById('status')!;
-const budgetBarsEl = document.getElementById('budget-bars')!;
-const jsonDumpEl = document.getElementById('json-dump')!;
-const resetBtn = document.getElementById('reset-btn')!;
-const layoutTabs = document.getElementById('layout-tabs')!;
-const contentTabs = document.getElementById('content-tabs')!;
-const colsSlider = document.getElementById('cols-slider')!;
-const gridColsInput = document.getElementById('grid-cols') as HTMLInputElement;
-const gridColsVal = document.getElementById('grid-cols-val')!;
-const gridGapInput = document.getElementById('grid-gap') as HTMLInputElement;
-const gridGapVal = document.getElementById('grid-gap-val')!;
-const configToggle = document.getElementById('config-toggle')!;
-const configPanel = document.getElementById('config-panel')!;
-const cfgBudget = document.getElementById('cfg-budget') as HTMLInputElement;
-const cfgBudgetVal = document.getElementById('cfg-budget-val')!;
-const cfgIncrement = document.getElementById(
-  'cfg-increment',
-) as HTMLInputElement;
-const cfgIncrementVal = document.getElementById('cfg-increment-val')!;
-const cfgGrowth = document.getElementById('cfg-growth') as HTMLInputElement;
-const cfgGrowthVal = document.getElementById('cfg-growth-val')!;
+const gridEl = getEl('grid');
+const statusEl = getEl('status');
+const budgetBarsEl = getEl('budget-bars');
+const jsonDumpEl = getEl('json-dump');
+const resetBtn = getEl('reset-btn');
+const layoutTabs = getEl('layout-tabs');
+const contentTabs = getEl('content-tabs');
+const colsSlider = getEl('cols-slider');
+const gridColsInput = getEl('grid-cols') as HTMLInputElement;
+const gridColsVal = getEl('grid-cols-val');
+const gridGapInput = getEl('grid-gap') as HTMLInputElement;
+const gridGapVal = getEl('grid-gap-val');
+const configToggle = getEl('config-toggle');
+const configPanel = getEl('config-panel');
+const cfgBudget = getEl('cfg-budget') as HTMLInputElement;
+const cfgBudgetVal = getEl('cfg-budget-val');
+const cfgIncrement = getEl('cfg-increment') as HTMLInputElement;
+const cfgIncrementVal = getEl('cfg-increment-val');
+const cfgGrowth = getEl('cfg-growth') as HTMLInputElement;
+const cfgGrowthVal = getEl('cfg-growth-val');
 
 // --- Sparkline SVG ---
 
 function sparklineSvg(data: number[]): string {
   const w = 200;
   const h = 32;
+  if (data.length < 2) {
+    return `<svg viewBox="0 0 ${w} ${h}" preserveAspectRatio="none"></svg>`;
+  }
   const max = Math.max(...data);
   const min = Math.min(...data);
   const range = max - min || 1;
@@ -202,21 +211,56 @@ function createAbstractWidgetEl(id: string): HTMLElement {
   const el = document.createElement('div');
   el.className = 'widget variant-compact';
   el.dataset.id = id;
-  el.innerHTML = `
-    <div class="accent"></div>
-    <div class="w-inner">
-      <div class="w-label">${id}</div>
-      <div class="w-score">0.0</div>
-      <div class="w-variant-tag">compact</div>
-      <div class="reveal r1">
-        <div class="w-meta">
-          <div>Clicks: <span class="click-count">0</span></div>
-          <div>Weight: <span class="weight-val">0%</span></div>
-        </div>
-        <div class="w-bar"><div class="w-bar-fill" style="width: 0%"></div></div>
-      </div>
-    </div>
-  `;
+
+  const accent = document.createElement('div');
+  accent.className = 'accent';
+
+  const inner = document.createElement('div');
+  inner.className = 'w-inner';
+
+  const label = document.createElement('div');
+  label.className = 'w-label';
+  label.textContent = id;
+
+  const score = document.createElement('div');
+  score.className = 'w-score';
+  score.textContent = '0.0';
+
+  const variantTag = document.createElement('div');
+  variantTag.className = 'w-variant-tag';
+  variantTag.textContent = 'compact';
+
+  const reveal = document.createElement('div');
+  reveal.className = 'reveal r1';
+
+  const meta = document.createElement('div');
+  meta.className = 'w-meta';
+
+  const clicksDiv = document.createElement('div');
+  const clicksSpan = document.createElement('span');
+  clicksSpan.className = 'click-count';
+  clicksSpan.textContent = '0';
+  clicksDiv.append('Clicks: ', clicksSpan);
+
+  const weightDiv = document.createElement('div');
+  const weightSpan = document.createElement('span');
+  weightSpan.className = 'weight-val';
+  weightSpan.textContent = '0%';
+  weightDiv.append('Weight: ', weightSpan);
+
+  meta.append(clicksDiv, weightDiv);
+
+  const bar = document.createElement('div');
+  bar.className = 'w-bar';
+  const barFill = document.createElement('div');
+  barFill.className = 'w-bar-fill';
+  barFill.style.width = '0%';
+  bar.appendChild(barFill);
+
+  reveal.append(meta, bar);
+  inner.append(label, score, variantTag, reveal);
+  el.append(accent, inner);
+
   el.addEventListener('click', () => engine.record(id));
   return el;
 }
@@ -225,26 +269,70 @@ function createDashboardWidgetEl(mock: MockWidget): HTMLElement {
   const el = document.createElement('div');
   el.className = 'widget variant-compact';
   el.dataset.id = mock.id;
-  el.innerHTML = `
-    <div class="accent"></div>
-    <div class="w-inner">
-      <div class="w-label">${mock.label}</div>
-      <div class="w-score">${mock.value}</div>
-      <div class="reveal r1">
-        <div class="w-trend"><span class="${mock.trendDir}">${mock.trendDir === 'up' ? '↑' : '↓'}</span> ${mock.trend}</div>
-      </div>
-      <div class="reveal r2">
-        <div class="w-sparkline">${sparklineSvg(mock.sparkData)}</div>
-      </div>
-      <div class="reveal r3">
-        <div class="w-divider"></div>
-        <div class="w-detail-rows">
-          ${mock.details.map((d) => `<div class="w-detail-row"><span class="w-dl">${d.label}</span><span class="w-dv">${d.value}</span></div>`).join('')}
-        </div>
-        <div class="w-tag ${mock.tag.cls}">${mock.tag.text}</div>
-      </div>
-    </div>
-  `;
+
+  const accent = document.createElement('div');
+  accent.className = 'accent';
+
+  const inner = document.createElement('div');
+  inner.className = 'w-inner';
+
+  const label = document.createElement('div');
+  label.className = 'w-label';
+  label.textContent = mock.label;
+
+  const score = document.createElement('div');
+  score.className = 'w-score';
+  score.textContent = mock.value;
+
+  // r1: trend row
+  const r1 = document.createElement('div');
+  r1.className = 'reveal r1';
+  const trend = document.createElement('div');
+  trend.className = 'w-trend';
+  const trendArrow = document.createElement('span');
+  trendArrow.className = mock.trendDir;
+  trendArrow.textContent = mock.trendDir === 'up' ? '↑' : '↓';
+  trend.append(trendArrow, ` ${mock.trend}`);
+  r1.appendChild(trend);
+
+  // r2: sparkline (SVG is built from numeric data — safe to use innerHTML on its container)
+  const r2 = document.createElement('div');
+  r2.className = 'reveal r2';
+  const sparklineContainer = document.createElement('div');
+  sparklineContainer.className = 'w-sparkline';
+  sparklineContainer.innerHTML = sparklineSvg(mock.sparkData);
+  r2.appendChild(sparklineContainer);
+
+  // r3: detail rows + tag
+  const r3 = document.createElement('div');
+  r3.className = 'reveal r3';
+
+  const divider = document.createElement('div');
+  divider.className = 'w-divider';
+
+  const detailRows = document.createElement('div');
+  detailRows.className = 'w-detail-rows';
+  for (const d of mock.details) {
+    const row = document.createElement('div');
+    row.className = 'w-detail-row';
+    const dl = document.createElement('span');
+    dl.className = 'w-dl';
+    dl.textContent = d.label;
+    const dv = document.createElement('span');
+    dv.className = 'w-dv';
+    dv.textContent = d.value;
+    row.append(dl, dv);
+    detailRows.appendChild(row);
+  }
+
+  const tag = document.createElement('div');
+  tag.className = `w-tag ${mock.tag.cls}`;
+  tag.textContent = mock.tag.text;
+
+  r3.append(divider, detailRows, tag);
+  inner.append(label, score, r1, r2, r3);
+  el.append(accent, inner);
+
   el.addEventListener('click', () => engine.record(mock.id));
   return el;
 }
@@ -253,11 +341,23 @@ function createBudgetRow(id: string, label: string): HTMLElement {
   const row = document.createElement('div');
   row.className = 'budget-row';
   row.dataset.id = id;
-  row.innerHTML = `
-    <span class="budget-label">${label}</span>
-    <div class="budget-track"><div class="budget-fill" style="width: 0%"></div></div>
-    <span class="budget-value">0.0</span>
-  `;
+
+  const labelEl = document.createElement('span');
+  labelEl.className = 'budget-label';
+  labelEl.textContent = label;
+
+  const track = document.createElement('div');
+  track.className = 'budget-track';
+  const fill = document.createElement('div');
+  fill.className = 'budget-fill';
+  fill.style.width = '0%';
+  track.appendChild(fill);
+
+  const value = document.createElement('span');
+  value.className = 'budget-value';
+  value.textContent = '0.0';
+
+  row.append(labelEl, track, value);
   return row;
 }
 
@@ -409,6 +509,36 @@ function render(states: WidgetState[]): void {
   }
 }
 
+// --- localStorage validation ---
+
+interface SavedWidgetEntry {
+  id: string;
+  score: number;
+  clicks: number;
+}
+
+interface SavedState {
+  version: 1;
+  widgets: SavedWidgetEntry[];
+  lastInteraction: number;
+}
+
+function isValidSave(data: unknown): data is SavedState {
+  if (typeof data !== 'object' || data === null) return false;
+  const d = data as Record<string, unknown>;
+  if (d['version'] !== 1) return false;
+  if (!Array.isArray(d['widgets'])) return false;
+  for (const w of d['widgets'] as unknown[]) {
+    if (typeof w !== 'object' || w === null) return false;
+    const ww = w as Record<string, unknown>;
+    if (typeof ww['id'] !== 'string') return false;
+    if (typeof ww['score'] !== 'number') return false;
+    if (typeof ww['clicks'] !== 'number') return false;
+  }
+  if (typeof d['lastInteraction'] !== 'number') return false;
+  return true;
+}
+
 // --- Init ---
 
 function fullRebuild(): void {
@@ -422,7 +552,12 @@ function fullRebuild(): void {
   const saved = localStorage.getItem(STORAGE_KEY);
   if (saved) {
     try {
-      engine.import(JSON.parse(saved));
+      const parsed: unknown = JSON.parse(saved);
+      if (isValidSave(parsed)) {
+        engine.import(parsed);
+      } else {
+        localStorage.removeItem(STORAGE_KEY);
+      }
     } catch {
       localStorage.removeItem(STORAGE_KEY);
     }
@@ -442,11 +577,13 @@ fullRebuild();
 contentTabs.addEventListener('click', (e) => {
   const btn = (e.target as HTMLElement).closest('.tab-btn') as HTMLElement;
   if (!btn?.dataset.content) return;
+  const mode = btn.dataset.content;
+  if (mode !== 'abstract' && mode !== 'dashboard') return;
   contentTabs
     .querySelectorAll('.tab-btn')
     .forEach((b) => b.classList.remove('active'));
   btn.classList.add('active');
-  contentMode = btn.dataset.content as 'abstract' | 'dashboard';
+  contentMode = mode;
   localStorage.removeItem(STORAGE_KEY);
   statusEl.textContent = 'Ready — click any widget';
   fullRebuild();
@@ -456,11 +593,13 @@ contentTabs.addEventListener('click', (e) => {
 layoutTabs.addEventListener('click', (e) => {
   const btn = (e.target as HTMLElement).closest('.tab-btn') as HTMLElement;
   if (!btn?.dataset.layout) return;
+  const layout = btn.dataset.layout;
+  if (!LAYOUTS.includes(layout)) return;
   layoutTabs
     .querySelectorAll('.tab-btn')
     .forEach((b) => b.classList.remove('active'));
   btn.classList.add('active');
-  currentLayout = btn.dataset.layout;
+  currentLayout = layout;
   applyLayout();
   render(engine.getState());
 });
