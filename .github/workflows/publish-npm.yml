@@ -17,9 +17,6 @@ jobs:
           cache: npm
           registry-url: https://registry.npmjs.org
       - run: npm ci
-      - run: npm version "$TAG" --no-git-tag-version
-        env:
-          TAG: ${{ github.event.release.tag_name }}
       - run: npm run check
       - run: npm publish
         env:
