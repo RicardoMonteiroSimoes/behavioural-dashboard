@@ -491,12 +491,117 @@ describe('BehaviouralEngine', () => {
   describe('on() / off() unknown events', () => {
     it('throws when subscribing to an unknown event', () => {
       const engine = new BehaviouralEngine();
-      expect(() => engine.on('unknown', vi.fn())).toThrow('Unknown event');
+      // Cast to bypass TS check — simulates a JS caller passing an invalid event
+      expect(() => engine.on('unknown' as 'change', vi.fn())).toThrow(
+        'Unknown event',
+      );
     });
 
     it('throws when unsubscribing from an unknown event', () => {
       const engine = new BehaviouralEngine();
-      expect(() => engine.off('unknown', vi.fn())).toThrow('Unknown event');
+      expect(() => engine.off('unknown' as 'change', vi.fn())).toThrow(
+        'Unknown event',
+      );
+    });
+  });
+
+  describe('register() with explicit initialScore 0', () => {
+    it('reset restores score to 0, not equal share', () => {
+      // 'a' is registered with explicit 0, 'b' with 50
+      // After normalization: sum = 50, so a=0, b=100
+      // After reset: a must go back to 0 (not equal share)
+      const engine = new BehaviouralEngine({ budget: 100 });
+      engine.register('a', 0);
+      engine.register('b', 50);
+
+      engine.record('b');
+      engine.record('b');
+
+      engine.reset();
+
+      // a was explicitly registered with 0 — it should restore to 0
+      expect(engine.getWidget('a').score).toBeCloseTo(0);
+      // budget invariant: b holds the whole budget after normalization
+      expect(sumScores(engine)).toBeCloseTo(100);
+    });
+  });
+
+  describe('register() after interactions', () => {
+    it('budget invariant holds after late registration', () => {
+      const engine = new BehaviouralEngine({ budget: 100, increment: 5 });
+      engine.register('a');
+      engine.register('b');
+
+      engine.record('a');
+      engine.record('a');
+      engine.record('b');
+
+      // Register a third widget after interactions have already happened
+      engine.register('c');
+
+      // getState() triggers ensureNormalized() which sets dirty = false
+      const sum = sumScores(engine);
+      expect(sum).toBeCloseTo(100);
+    });
+  });
+
+  describe('register() input validation', () => {
+    it('throws when initialScore is NaN', () => {
+      const engine = new BehaviouralEngine();
+      expect(() => engine.register('a', NaN)).toThrow(
+        'finite non-negative number',
+      );
+    });
+
+    it('throws when initialScore is Infinity', () => {
+      const engine = new BehaviouralEngine();
+      expect(() => engine.register('a', Infinity)).toThrow(
+        'finite non-negative number',
+      );
+    });
+
+    it('throws when initialScore is negative', () => {
+      const engine = new BehaviouralEngine();
+      expect(() => engine.register('a', -1)).toThrow(
+        'finite non-negative number',
+      );
+    });
+  });
+
+  describe('export / import with mismatched widgets in both directions', () => {
+    it('handles snapshot that has extra widgets AND is missing local widgets', () => {
+      // Engine has: a, b, c
+      // Snapshot has: a, b, d (d is unknown; c is absent)
+      const engine = new BehaviouralEngine({ budget: 100, increment: 5 });
+      engine.register('a');
+      engine.register('b');
+      engine.register('c');
+
+      const cScoreBefore = engine.getWidget('c').score; // ~33.33
+
+      engine.import({
+        version: 1,
+        widgets: [
+          { id: 'a', score: 40, clicks: 2 },
+          { id: 'b', score: 20, clicks: 1 },
+          { id: 'd', score: 40, clicks: 5 }, // unknown — must be ignored
+        ],
+        lastInteraction: 500,
+      });
+
+      // 'd' is not registered, so it must be silently ignored
+      expect(() => engine.getWidget('d')).toThrow('not registered');
+
+      // 'c' was absent from the snapshot, so it retains its pre-import score
+      const expectedCScore = (cScoreBefore / (40 + 20 + cScoreBefore)) * 100;
+      expect(engine.getWidget('c').score).toBeCloseTo(expectedCScore);
+
+      // Budget invariant must hold
+      expect(sumScores(engine)).toBeCloseTo(100);
+
+      // Known widgets were updated correctly
+      expect(engine.getWidget('a').clicks).toBe(2);
+      expect(engine.getWidget('b').clicks).toBe(1);
     });
   });
 

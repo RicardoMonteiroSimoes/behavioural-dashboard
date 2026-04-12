@@ -26,6 +26,7 @@ interface WidgetEntry {
   score: number;
   clicks: number;
   initialScore: number;
+  hasExplicitInitial: boolean;
 }
 
 const DEFAULTS: BehaviouralEngineConfig = {
@@ -37,8 +38,8 @@ const DEFAULTS: BehaviouralEngineConfig = {
 
 export class BehaviouralEngine {
   private readonly config: BehaviouralEngineConfig;
-  private widgets = new Map<string, WidgetEntry>();
-  private listeners = new Set<ChangeListener>();
+  private readonly widgets = new Map<string, WidgetEntry>();
+  private readonly listeners = new Set<ChangeListener>();
   private lastInteraction = 0;
   private dirty = true;
 
@@ -62,8 +63,21 @@ export class BehaviouralEngine {
     if (this.widgets.has(id)) {
       throw new Error(`Widget "${id}" is already registered`);
     }
+    if (initialScore !== undefined) {
+      if (!Number.isFinite(initialScore) || initialScore < 0) {
+        throw new Error(
+          `initialScore must be a finite non-negative number, got: ${initialScore}`,
+        );
+      }
+    }
     const score = initialScore ?? 0;
-    this.widgets.set(id, { id, score, clicks: 0, initialScore: score });
+    this.widgets.set(id, {
+      id,
+      score,
+      clicks: 0,
+      initialScore: score,
+      hasExplicitInitial: initialScore !== undefined,
+    });
     this.dirty = true;
   }
 
@@ -77,13 +91,16 @@ export class BehaviouralEngine {
     widget.clicks++;
     this.lastInteraction = Date.now();
 
-    const others = [...this.widgets.values()].filter((w) => w.id !== id);
-    const sumOthers = others.reduce((s, w) => s + w.score, 0);
+    let sumOthers = 0;
+    for (const w of this.widgets.values()) {
+      if (w.id !== id) sumOthers += w.score;
+    }
 
     if (sumOthers > 0) {
       const drain = Math.min(this.config.increment, sumOthers);
       let actualDrain = 0;
-      for (const other of others) {
+      for (const other of this.widgets.values()) {
+        if (other.id === id) continue;
         const loss = drain * (other.score / sumOthers);
         const clamped = Math.max(0, other.score - loss);
         actualDrain += other.score - clamped;
@@ -168,15 +185,15 @@ export class BehaviouralEngine {
     this.emit();
   }
 
-  on(event: string, cb: ChangeListener): void {
-    if (event !== 'change') {
+  on(event: 'change', cb: ChangeListener): void {
+    if ((event as string) !== 'change') {
       throw new Error(`Unknown event: "${event}"`);
     }
     this.listeners.add(cb);
   }
 
-  off(event: string, cb: ChangeListener): void {
-    if (event !== 'change') {
+  off(event: 'change', cb: ChangeListener): void {
+    if ((event as string) !== 'change') {
       throw new Error(`Unknown event: "${event}"`);
     }
     this.listeners.delete(cb);
@@ -220,7 +237,7 @@ export class BehaviouralEngine {
         // distribution for widgets that were registered without explicit scores.
         // Widgets registered with an explicit initialScore (even 0) are excluded
         // because their initialScore was deliberately set at registration time.
-        if (entry.initialScore === 0) {
+        if (!entry.hasExplicitInitial) {
           entry.initialScore = equal;
         }
       }
