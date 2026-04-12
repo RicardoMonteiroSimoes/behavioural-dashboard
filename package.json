@@ -1,6 +1,6 @@
 {
   "name": "behavioural-dashboard",
-  "version": "0.9.1",
+  "version": "0.9.3",
   "description": "Framework-agnostic TypeScript engine for self-adapting UI layouts based on user behaviour",
   "type": "module",
   "types": "./dist/index.d.ts",
