@@ -16,6 +16,12 @@ export default tseslint.config(
     },
   },
   {
+    files: ['demo/**/*.ts'],
+    rules: {
+      '@typescript-eslint/no-non-null-assertion': 'off',
+    },
+  },
+  {
     ignores: ['dist/', 'demo/dist/'],
   },
 );

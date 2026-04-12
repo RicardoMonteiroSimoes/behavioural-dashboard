@@ -249,9 +249,7 @@ describe('BehaviouralEngine', () => {
       engine.record('a');
       engine.record('a');
 
-      const totalWeight = engine
-        .getState()
-        .reduce((s, w) => s + w.weight, 0);
+      const totalWeight = engine.getState().reduce((s, w) => s + w.weight, 0);
       expect(totalWeight).toBeCloseTo(1);
     });
   });

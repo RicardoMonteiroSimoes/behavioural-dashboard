@@ -3,13 +3,13 @@ import type { WidgetState } from 'behavioural-dashboard';
 
 // Default score distributions — variants are now weight-driven
 // With growthRate 0.1 and 4 variants: 0-9% = compact, 10-19% = standard, 20-29% = expanded, 30%+ = full
-const ABSTRACT_DEFAULTS: Array<{ id: string; score: number }> = [
-  { id: 'Alpha',   score: 30 }, // 30% → full
-  { id: 'Bravo',   score: 22 }, // 22% → expanded
+const ABSTRACT_DEFAULTS: { id: string; score: number }[] = [
+  { id: 'Alpha', score: 30 }, // 30% → full
+  { id: 'Bravo', score: 22 }, // 22% → expanded
   { id: 'Charlie', score: 18 }, // 18% → standard
-  { id: 'Delta',   score: 14 }, // 14% → standard
-  { id: 'Echo',    score: 10 }, // 10% → standard
-  { id: 'Foxtrot', score: 6 },  //  6% → compact
+  { id: 'Delta', score: 14 }, // 14% → standard
+  { id: 'Echo', score: 10 }, // 10% → standard
+  { id: 'Foxtrot', score: 6 }, //  6% → compact
 ];
 const ABSTRACT_WIDGETS = ABSTRACT_DEFAULTS.map((w) => w.id);
 
@@ -20,24 +20,27 @@ interface MockWidget {
   trend: string;
   trendDir: 'up' | 'dn';
   sparkData: number[];
-  details: Array<{ label: string; value: string }>;
+  details: { label: string; value: string }[];
   tag: { text: string; cls: string };
 }
 
 // Dashboard: Revenue/Users are power-user widgets, errors/conversion are secondary
-const DASHBOARD_DEFAULTS: Array<{ id: string; score: number }> = [
-  { id: 'revenue',    score: 30 }, // 30% → full
-  { id: 'users',      score: 24 }, // 24% → expanded
-  { id: 'orders',     score: 18 }, // 18% → standard
-  { id: 'response',   score: 14 }, // 14% → standard
-  { id: 'errors',     score: 9 },  //  9% → compact
-  { id: 'conversion', score: 5 },  //  5% → compact
+const DASHBOARD_DEFAULTS: { id: string; score: number }[] = [
+  { id: 'revenue', score: 30 }, // 30% → full
+  { id: 'users', score: 24 }, // 24% → expanded
+  { id: 'orders', score: 18 }, // 18% → standard
+  { id: 'response', score: 14 }, // 14% → standard
+  { id: 'errors', score: 9 }, //  9% → compact
+  { id: 'conversion', score: 5 }, //  5% → compact
 ];
 
 const DASHBOARD_WIDGETS: MockWidget[] = [
   {
-    id: 'revenue', label: 'Revenue', value: '$48.2K',
-    trend: '+12% vs last month', trendDir: 'up',
+    id: 'revenue',
+    label: 'Revenue',
+    value: '$48.2K',
+    trend: '+12% vs last month',
+    trendDir: 'up',
     sparkData: [30, 45, 38, 62, 55, 72, 68, 80, 75, 90, 85, 94],
     details: [
       { label: 'Subscriptions', value: '$32.1K' },
@@ -47,8 +50,11 @@ const DASHBOARD_WIDGETS: MockWidget[] = [
     tag: { text: 'Above target', cls: 'tg-green' },
   },
   {
-    id: 'users', label: 'Active users', value: '1,284',
-    trend: '+8% from yesterday', trendDir: 'up',
+    id: 'users',
+    label: 'Active users',
+    value: '1,284',
+    trend: '+8% from yesterday',
+    trendDir: 'up',
     sparkData: [55, 62, 58, 72, 68, 75, 80, 78, 85, 90, 88, 94],
     details: [
       { label: 'New signups', value: '142' },
@@ -58,8 +64,11 @@ const DASHBOARD_WIDGETS: MockWidget[] = [
     tag: { text: 'Growing', cls: 'tg-green' },
   },
   {
-    id: 'orders', label: 'Orders', value: '384',
-    trend: 'Up 23 from yesterday', trendDir: 'up',
+    id: 'orders',
+    label: 'Orders',
+    value: '384',
+    trend: 'Up 23 from yesterday',
+    trendDir: 'up',
     sparkData: [40, 35, 50, 45, 60, 55, 70, 65, 75, 80, 72, 85],
     details: [
       { label: 'Completed', value: '341' },
@@ -69,8 +78,11 @@ const DASHBOARD_WIDGETS: MockWidget[] = [
     tag: { text: 'High volume', cls: 'tg-green' },
   },
   {
-    id: 'response', label: 'Avg response', value: '240ms',
-    trend: '-18ms vs last week', trendDir: 'up',
+    id: 'response',
+    label: 'Avg response',
+    value: '240ms',
+    trend: '-18ms vs last week',
+    trendDir: 'up',
     sparkData: [80, 75, 70, 72, 65, 60, 58, 55, 52, 50, 48, 45],
     details: [
       { label: 'P50', value: '180ms' },
@@ -80,8 +92,11 @@ const DASHBOARD_WIDGETS: MockWidget[] = [
     tag: { text: 'On track', cls: 'tg-green' },
   },
   {
-    id: 'errors', label: 'Error rate', value: '0.42%',
-    trend: '+0.08% from yesterday', trendDir: 'dn',
+    id: 'errors',
+    label: 'Error rate',
+    value: '0.42%',
+    trend: '+0.08% from yesterday',
+    trendDir: 'dn',
     sparkData: [10, 12, 15, 14, 18, 22, 20, 25, 30, 28, 35, 42],
     details: [
       { label: '5xx errors', value: '18' },
@@ -91,8 +106,11 @@ const DASHBOARD_WIDGETS: MockWidget[] = [
     tag: { text: 'Monitor', cls: 'tg-amber' },
   },
   {
-    id: 'conversion', label: 'Conversion', value: '3.2%',
-    trend: '-0.4% vs last week', trendDir: 'dn',
+    id: 'conversion',
+    label: 'Conversion',
+    value: '3.2%',
+    trend: '-0.4% vs last week',
+    trendDir: 'dn',
     sparkData: [50, 48, 52, 45, 42, 40, 38, 35, 34, 32, 30, 32],
     details: [
       { label: 'Visitors', value: '12,400' },
@@ -111,15 +129,9 @@ let contentMode: 'abstract' | 'dashboard' = 'abstract';
 let currentLayout = 'flex-row';
 let gridCols = 3;
 
-function getWidgetIds(): string[] {
-  return contentMode === 'abstract'
-    ? ABSTRACT_WIDGETS
-    : DASHBOARD_WIDGETS.map((w) => w.id);
-}
-
 let engine = createEngine(100, 5, 0.1);
 
-function getDefaults(): Array<{ id: string; score: number }> {
+function getDefaults(): { id: string; score: number }[] {
   return contentMode === 'abstract' ? ABSTRACT_DEFAULTS : DASHBOARD_DEFAULTS;
 }
 
@@ -129,7 +141,12 @@ function createEngine(
   growthRate: number,
 ): BehaviouralEngine {
   const defaults = getDefaults();
-  const e = new BehaviouralEngine({ budget, increment, growthRate, variants: VARIANTS });
+  const e = new BehaviouralEngine({
+    budget,
+    increment,
+    growthRate,
+    variants: VARIANTS,
+  });
   for (const d of defaults) e.register(d.id, d.score);
   return e;
 }
@@ -151,7 +168,9 @@ const configToggle = document.getElementById('config-toggle')!;
 const configPanel = document.getElementById('config-panel')!;
 const cfgBudget = document.getElementById('cfg-budget') as HTMLInputElement;
 const cfgBudgetVal = document.getElementById('cfg-budget-val')!;
-const cfgIncrement = document.getElementById('cfg-increment') as HTMLInputElement;
+const cfgIncrement = document.getElementById(
+  'cfg-increment',
+) as HTMLInputElement;
 const cfgIncrementVal = document.getElementById('cfg-increment-val')!;
 const cfgGrowth = document.getElementById('cfg-growth') as HTMLInputElement;
 const cfgGrowthVal = document.getElementById('cfg-growth-val')!;
@@ -268,7 +287,9 @@ function applyLayout(): void {
   gridEl.classList.add(`layout-${currentLayout}`);
 
   colsSlider.style.display =
-    currentLayout === 'grid-cols' || currentLayout === 'equal' ? 'flex' : 'none';
+    currentLayout === 'grid-cols' || currentLayout === 'equal'
+      ? 'flex'
+      : 'none';
 
   if (currentLayout === 'grid-cols' || currentLayout === 'equal') {
     gridEl.style.gridTemplateColumns = `repeat(${gridCols}, 1fr)`;
@@ -297,7 +318,10 @@ function applyLayoutSizing(states: WidgetState[]): void {
         el.style.flexBasis = `${Math.max(100, state.weight * 400)}px`;
         break;
       case 'grid-cols': {
-        const span = Math.max(1, Math.min(gridCols, Math.round(state.weight * gridCols * 1.5)));
+        const span = Math.max(
+          1,
+          Math.min(gridCols, Math.round(state.weight * gridCols * 1.5)),
+        );
         el.style.gridColumn = `span ${span}`;
         break;
       }
@@ -314,7 +338,9 @@ function applyLayoutSizing(states: WidgetState[]): void {
 
 function render(states: WidgetState[]): void {
   for (const state of states) {
-    const widgetEl = gridEl.querySelector(`[data-id="${state.id}"]`) as HTMLElement;
+    const widgetEl = gridEl.querySelector(
+      `[data-id="${state.id}"]`,
+    ) as HTMLElement;
     if (!widgetEl) continue;
 
     for (const v of VARIANTS) widgetEl.classList.remove(`variant-${v}`);
@@ -331,9 +357,13 @@ function render(states: WidgetState[]): void {
       const reveal = widgetEl.querySelector('.reveal') as HTMLElement;
       reveal.classList.toggle('show', state.clicks > 0);
 
-      widgetEl.querySelector('.click-count')!.textContent = String(state.clicks);
-      widgetEl.querySelector('.weight-val')!.textContent = `${(state.weight * 100).toFixed(1)}%`;
-      (widgetEl.querySelector('.w-bar-fill') as HTMLElement).style.width = `${state.weight * 100}%`;
+      widgetEl.querySelector('.click-count')!.textContent = String(
+        state.clicks,
+      );
+      widgetEl.querySelector('.weight-val')!.textContent =
+        `${(state.weight * 100).toFixed(1)}%`;
+      (widgetEl.querySelector('.w-bar-fill') as HTMLElement).style.width =
+        `${state.weight * 100}%`;
     } else {
       // Dashboard mode: progressive disclosure by variant
       const scoreEl = widgetEl.querySelector('.w-score') as HTMLElement;
@@ -345,14 +375,21 @@ function render(states: WidgetState[]): void {
 
       // standard+ → trend, expanded+ → sparkline, full → details
       r1?.classList.toggle('show', state.variant !== 'compact');
-      r2?.classList.toggle('show', state.variant === 'expanded' || state.variant === 'full');
+      r2?.classList.toggle(
+        'show',
+        state.variant === 'expanded' || state.variant === 'full',
+      );
       r3?.classList.toggle('show', state.variant === 'full');
     }
 
-    const budgetRow = budgetBarsEl.querySelector(`[data-id="${state.id}"]`) as HTMLElement;
+    const budgetRow = budgetBarsEl.querySelector(
+      `[data-id="${state.id}"]`,
+    ) as HTMLElement;
     if (budgetRow) {
-      (budgetRow.querySelector('.budget-fill') as HTMLElement).style.width = `${state.weight * 100}%`;
-      budgetRow.querySelector('.budget-value')!.textContent = state.score.toFixed(1);
+      (budgetRow.querySelector('.budget-fill') as HTMLElement).style.width =
+        `${state.weight * 100}%`;
+      budgetRow.querySelector('.budget-value')!.textContent =
+        state.score.toFixed(1);
     }
   }
 
@@ -364,9 +401,10 @@ function render(states: WidgetState[]): void {
 
   const top = states.reduce((a, b) => (a.score >= b.score ? a : b));
   if (top.clicks > 0) {
-    const label = contentMode === 'abstract'
-      ? top.id
-      : DASHBOARD_WIDGETS.find((w) => w.id === top.id)?.label ?? top.id;
+    const label =
+      contentMode === 'abstract'
+        ? top.id
+        : (DASHBOARD_WIDGETS.find((w) => w.id === top.id)?.label ?? top.id);
     statusEl.textContent = `"${label}" leads with ${top.score.toFixed(1)} pts — variant: ${top.variant}`;
   }
 }
@@ -404,7 +442,9 @@ fullRebuild();
 contentTabs.addEventListener('click', (e) => {
   const btn = (e.target as HTMLElement).closest('.tab-btn') as HTMLElement;
   if (!btn?.dataset.content) return;
-  contentTabs.querySelectorAll('.tab-btn').forEach((b) => b.classList.remove('active'));
+  contentTabs
+    .querySelectorAll('.tab-btn')
+    .forEach((b) => b.classList.remove('active'));
   btn.classList.add('active');
   contentMode = btn.dataset.content as 'abstract' | 'dashboard';
   localStorage.removeItem(STORAGE_KEY);
@@ -416,7 +456,9 @@ contentTabs.addEventListener('click', (e) => {
 layoutTabs.addEventListener('click', (e) => {
   const btn = (e.target as HTMLElement).closest('.tab-btn') as HTMLElement;
   if (!btn?.dataset.layout) return;
-  layoutTabs.querySelectorAll('.tab-btn').forEach((b) => b.classList.remove('active'));
+  layoutTabs
+    .querySelectorAll('.tab-btn')
+    .forEach((b) => b.classList.remove('active'));
   btn.classList.add('active');
   currentLayout = btn.dataset.layout;
   applyLayout();
@@ -440,7 +482,9 @@ gridGapInput.addEventListener('input', () => {
 // Config panel toggle
 configToggle.addEventListener('click', () => {
   configPanel.classList.toggle('open');
-  configToggle.textContent = configPanel.classList.contains('open') ? 'Hide config' : 'Engine config';
+  configToggle.textContent = configPanel.classList.contains('open')
+    ? 'Hide config'
+    : 'Engine config';
 });
 
 // Engine config sliders

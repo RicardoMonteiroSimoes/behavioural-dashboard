@@ -37,8 +37,8 @@ const DEFAULTS: BehaviouralEngineConfig = {
 
 export class BehaviouralEngine {
   private readonly config: BehaviouralEngineConfig;
-  private widgets: Map<string, WidgetEntry> = new Map();
-  private listeners: Set<ChangeListener> = new Set();
+  private widgets = new Map<string, WidgetEntry>();
+  private listeners = new Set<ChangeListener>();
   private lastInteraction = 0;
   private dirty = true;
 
