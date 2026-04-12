@@ -420,6 +420,86 @@ describe('BehaviouralEngine', () => {
     });
   });
 
+  describe('getWidget', () => {
+    it('throws on unknown widget id', () => {
+      const engine = new BehaviouralEngine();
+      expect(() => engine.getWidget('unknown')).toThrow('not registered');
+    });
+  });
+
+  describe('import() validation', () => {
+    it('skips widgets with negative scores', () => {
+      const engine = new BehaviouralEngine({ budget: 100 });
+      engine.register('a');
+      engine.register('b');
+      const scoreBefore = engine.getWidget('a').score;
+
+      engine.import({
+        version: 1,
+        widgets: [{ id: 'a', score: -10, clicks: 0 }],
+        lastInteraction: 0,
+      });
+
+      // Widget 'a' must not have been updated to a negative score
+      expect(engine.getWidget('a').score).toBeGreaterThanOrEqual(0);
+      // Since the entry was skipped, the score should still equal the pre-import value
+      expect(engine.getWidget('a').score).toBeCloseTo(scoreBefore);
+    });
+
+    it('skips widgets with NaN scores', () => {
+      const engine = new BehaviouralEngine({ budget: 100 });
+      engine.register('a');
+      const scoreBefore = engine.getWidget('a').score;
+
+      engine.import({
+        version: 1,
+        widgets: [{ id: 'a', score: NaN, clicks: 0 }],
+        lastInteraction: 0,
+      });
+
+      expect(engine.getWidget('a').score).toBeCloseTo(scoreBefore);
+    });
+
+    it('skips widgets with non-integer clicks', () => {
+      const engine = new BehaviouralEngine({ budget: 100 });
+      engine.register('a');
+
+      engine.import({
+        version: 1,
+        widgets: [{ id: 'a', score: 50, clicks: 1.5 }],
+        lastInteraction: 0,
+      });
+
+      // Entry was skipped due to invalid clicks; clicks counter must remain 0
+      expect(engine.getWidget('a').clicks).toBe(0);
+    });
+
+    it('skips widgets with negative clicks', () => {
+      const engine = new BehaviouralEngine({ budget: 100 });
+      engine.register('a');
+
+      engine.import({
+        version: 1,
+        widgets: [{ id: 'a', score: 50, clicks: -3 }],
+        lastInteraction: 0,
+      });
+
+      expect(engine.getWidget('a').clicks).toBe(0);
+    });
+  });
+
+  describe('on() / off() unknown events', () => {
+    it('throws when subscribing to an unknown event', () => {
+      const engine = new BehaviouralEngine();
+      expect(() => engine.on('unknown', vi.fn())).toThrow('Unknown event');
+    });
+
+    it('throws when unsubscribing from an unknown event', () => {
+      const engine = new BehaviouralEngine();
+      expect(() => engine.off('unknown', vi.fn())).toThrow('Unknown event');
+    });
+  });
+
   describe('edge cases', () => {
     it('handles single widget', () => {
       const engine = new BehaviouralEngine({ budget: 100 });

@@ -5,7 +5,6 @@
  */
 export interface AdaptiveState {
   version: 1;
-  userId?: string;
   widgets: { id: string; score: number; clicks: number }[];
   lastInteraction: number;
 }

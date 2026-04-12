@@ -139,11 +139,20 @@ export class BehaviouralEngine {
       const widget = this.widgets.get(ws.id);
       if (widget) {
         // Only update widgets that exist in this engine; unknown ids are ignored.
+        if (!Number.isFinite(ws.score) || ws.score < 0) continue;
+        if (
+          !Number.isFinite(ws.clicks) ||
+          !Number.isInteger(ws.clicks) ||
+          ws.clicks < 0
+        )
+          continue;
         widget.score = ws.score;
         widget.clicks = ws.clicks;
       }
     }
-    this.lastInteraction = state.lastInteraction;
+    this.lastInteraction = Number.isFinite(state.lastInteraction)
+      ? state.lastInteraction
+      : 0;
     this.normalizeScores();
     this.emit();
   }
@@ -159,13 +168,17 @@ export class BehaviouralEngine {
     this.emit();
   }
 
-  on(event: 'change', cb: ChangeListener): void {
-    if (event !== 'change') return;
+  on(event: string, cb: ChangeListener): void {
+    if (event !== 'change') {
+      throw new Error(`Unknown event: "${event}"`);
+    }
     this.listeners.add(cb);
   }
 
-  off(event: 'change', cb: ChangeListener): void {
-    if (event !== 'change') return;
+  off(event: string, cb: ChangeListener): void {
+    if (event !== 'change') {
+      throw new Error(`Unknown event: "${event}"`);
+    }
     this.listeners.delete(cb);
   }
 
