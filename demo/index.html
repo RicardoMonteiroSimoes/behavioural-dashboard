@@ -298,7 +298,7 @@
       }
       .grid.layout-flex-row .widget {
         flex-basis: 0;
-        min-width: 80px;
+        min-width: 100px;
       }
 
       /* Layout: flex-wrap */
@@ -350,6 +350,7 @@
         overflow: hidden;
         display: flex;
         flex-direction: column;
+        min-width: 0;
         transition:
           flex-grow 0.4s ease,
           flex-basis 0.4s ease,
@@ -419,6 +420,8 @@
         flex: 1;
         display: flex;
         flex-direction: column;
+        min-width: 0;
+        overflow: hidden;
       }
 
       .w-label {
@@ -428,6 +431,7 @@
         text-transform: uppercase;
         color: var(--text-t);
         margin-bottom: 6px;
+        word-break: break-word;
       }
 
       .w-score {
@@ -437,6 +441,9 @@
         line-height: 1;
         font-family: ui-monospace, 'Cascadia Code', 'Fira Mono', monospace;
         transition: font-size 0.4s;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
       }
 
       .w-variant-tag {
@@ -450,6 +457,10 @@
         border: var(--border-thin);
         color: var(--text-t);
         background: none;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        max-width: 100%;
       }
       /* Accent the active variant tag for standard+ */
       .widget.variant-standard .w-variant-tag,
