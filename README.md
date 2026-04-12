@@ -99,7 +99,7 @@ engine.register('secondary', 30);
 engine.register('tertiary',  20);  // starts small
 ```
 
-If no initial scores are given, all widgets start equal. `reset()` always returns to those initial values.
+If no initial scores are given, all widgets start at `0` and receive an equal share on first normalization. `reset()` always returns to those initial values.
 
 ## Configuration
 
@@ -120,7 +120,12 @@ Creates a new engine. All config fields are optional and fall back to defaults.
 
 ### `register(id: string, initialScore?: number): void`
 
-Registers a widget. Throws if `id` is already registered. If `initialScore` is omitted the widget starts at `0` and is assigned an equal share when scores are first normalized.
+Registers a widget. Throws if `id` is already registered. Does not emit a `'change'` event.
+
+If `initialScore` is omitted the widget starts at score `0`. What happens next depends on the mix of registered widgets:
+
+- **All widgets have score 0** (no explicit initial scores anywhere): on first normalization they receive an equal share of the budget.
+- **Some widgets have explicit scores**: the scoreless widget stays at `0` until other widgets are interacted with; it then receives budget share proportionally through normalization, but it does not get an automatic equal slice.
 
 ### `record(id: string): void`
 
@@ -208,7 +213,11 @@ Recommended CSS transitions so size and style changes animate smoothly:
 
 ## Persistence
 
-`export()` returns an `AdaptiveState` object you can serialize and store anywhere:
+`export()` returns an `AdaptiveState` object you can serialize and store anywhere. The type is exported and can be imported directly:
+
+```typescript
+import type { AdaptiveState } from 'behavioural-dashboard';
+```
 
 ```typescript
 interface AdaptiveState {

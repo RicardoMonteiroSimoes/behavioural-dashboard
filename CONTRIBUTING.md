@@ -15,6 +15,19 @@ npm install
 
 ## Development
 
+### Project structure
+
+```
+src/
+  index.ts          Barrel exports
+  engine.ts         BehaviouralEngine scoring engine
+  state.ts          Serializable state types
+  engine.test.ts    Tests (alongside source)
+demo/
+  index.html        Interactive demo
+  main.ts           Demo application
+```
+
 ### Demo
 
 Run the interactive demo locally with hot reload:

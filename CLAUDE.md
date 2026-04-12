@@ -19,7 +19,7 @@ Framework-agnostic TypeScript engine for self-adapting UI layouts based on user 
 
 ```sh
 npm run build         # compile library to dist/
-npm run test          # run vitest suite
+npm test              # run vitest suite
 npm run check         # full pipeline: types + lint + format + knip + jscpd + tests
 npm run demo          # vite dev server with HMR
 npm run lint          # eslint src/ demo/
