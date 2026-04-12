@@ -3,8 +3,6 @@
   "version": "0.1.0",
   "description": "Framework-agnostic TypeScript engine for self-adapting UI layouts based on user behaviour",
   "type": "module",
-  "main": "./dist/index.js",
-  "module": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "exports": {
     ".": {

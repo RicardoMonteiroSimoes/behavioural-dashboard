@@ -2,18 +2,7 @@
 
 A framework-agnostic TypeScript engine that tracks user interaction patterns and outputs serializable state for adaptive UIs. No DOM manipulation, no CSS, no framework lock-in — just behavioural primitives you wire into your own components.
 
-Inspired by [Tanvi Palkar's "Designing for the 100th Use"](https://tanvin-alt.github.io/behavioural-dashboard/) demo ([source](https://github.com/tanvin-alt/behavioural-dashboard)). This library extracts the core mechanics into a reusable package.
-
-## How it works
-
-A fixed **score budget** (default: 100) is distributed across all registered widgets. When a user interacts with a widget, it gains points — drained proportionally from the others. Widgets that get more attention grow; neglected ones shrink. The total always sums to the budget.
-
-The engine outputs per widget:
-- **score** and **weight** (0–1) — how much of the budget this widget holds
-- **variant** — a string from your ordered list, advancing every N clicks
-- **order** — sort position by score descending
-
-You map these to whatever layout system and CSS you use. The library has no opinion.
+> **ESM only.** This package ships ES modules exclusively. It requires a bundler or a runtime that supports `"type": "module"`.
 
 ## Installation
 
@@ -21,7 +10,7 @@ You map these to whatever layout system and CSS you use. The library has no opin
 npm install behavioural-dashboard
 ```
 
-## Usage
+## Quick start
 
 ```typescript
 import { BehaviouralEngine } from 'behavioural-dashboard';
@@ -29,141 +18,226 @@ import { BehaviouralEngine } from 'behavioural-dashboard';
 const engine = new BehaviouralEngine({
   budget: 100,
   increment: 5,
-  growthRate: 5,
+  growthRate: 0.2,
   variants: ['compact', 'standard', 'expanded'],
 });
 
-// Register widgets — optionally with initial scores for a default layout
+// Register widgets — optionally with initial scores for a pre-seeded layout
 engine.register('orders', 40);
 engine.register('fleet', 35);
 engine.register('alerts', 25);
 
-// Record interactions
+// Record an interaction
 engine.record('orders');
 
-// Read state
+// Read state (returned in registration order)
 const states = engine.getState();
 // [
-//   { id: 'orders', score: 43.2, weight: 0.432, clicks: 1, variant: 'compact', order: 0 },
-//   { id: 'fleet',  score: 32.1, weight: 0.321, clicks: 0, variant: 'compact', order: 1 },
-//   { id: 'alerts', score: 24.7, weight: 0.247, clicks: 0, variant: 'compact', order: 2 },
+//   { id: 'orders', score: 43.2, weight: 0.432, clicks: 1, variant: 'standard' },
+//   { id: 'fleet',  score: 32.1, weight: 0.321, clicks: 0, variant: 'compact'  },
+//   { id: 'alerts', score: 24.7, weight: 0.247, clicks: 0, variant: 'compact'  },
 // ]
 
 // Subscribe to changes
 engine.on('change', (states) => {
   for (const s of states) {
+    const el = document.getElementById(s.id)!;
     el.className = `widget widget--${s.variant}`;
-    el.style.flexGrow = String(s.weight * widgetCount);
-    el.style.order = String(s.order);
+    el.style.flexGrow = String(s.weight * states.length);
   }
 });
 ```
 
-## Scoring model
+## How it works
 
-- **Budget**: fixed total across all widgets (default: `100`). Scores always sum to this.
-- **Increment**: points transferred per click (default: `5`). Drained proportionally from all other widgets — high-scoring widgets lose more than low-scoring ones.
-- **No time-based decay**: redistribution on interaction *is* the balancing mechanism. Unused widgets shrink only when other widgets are clicked.
+### Zero-sum budget scoring
 
-Pre-seeding scores lets you define a default layout:
+A fixed **budget** (default: `100`) is shared across all registered widgets. Scores always sum to exactly the budget. When a widget is interacted with, it gains points drained proportionally from every other widget — widgets that hold more score lose more than those that hold less.
+
+### Proportional drain redistribution
+
+On each `record(id)` call:
+
+1. The engine collects all widgets other than the target.
+2. It drains up to `increment` points from them, taking from each in proportion to its current score.
+3. Those points are added to the target widget's score.
+4. Scores are renormalized so the total stays at `budget`.
+
+Unused widgets shrink only when other widgets are clicked. There is no time-based decay.
+
+### Weight-based variant resolution
+
+Each widget's **weight** is its fraction of the total budget:
+
+```
+weight = score / budget        // range: 0–1
+```
+
+The active variant is chosen by mapping weight through the `growthRate` step:
+
+```
+variantIndex = min(floor(weight / growthRate), variants.length - 1)
+```
+
+With the default `growthRate` of `0.2` and variants `['compact', 'standard', 'expanded']`:
+
+| weight range | variantIndex | variant    |
+|---|---|---|
+| 0.00 – 0.19  | 0            | `compact`  |
+| 0.20 – 0.39  | 1            | `standard` |
+| 0.40 – 1.00  | 2            | `expanded` |
+
+A smaller `growthRate` makes variants unlock at lower weights (faster progression). A larger value requires a widget to hold more of the budget before advancing.
+
+### Pre-seeded default layouts
+
+Registering widgets with explicit initial scores sets a default layout:
 
 ```typescript
-engine.register('primary', 50);   // starts prominent
+engine.register('primary',   50);  // starts prominent
 engine.register('secondary', 30);
-engine.register('tertiary', 20);  // starts small
+engine.register('tertiary',  20);  // starts small
 ```
 
-If no initial scores are given, all widgets start equal.
+If no initial scores are given, all widgets start equal. `reset()` always returns to those initial values.
 
-## Variant resolution
+## Configuration
 
-You provide an ordered array of variant names. The engine advances through them based on click count:
+| Option       | Default       | Description                                              |
+|---|---|---|
+| `budget`     | `100`         | Total score pool shared across all widgets               |
+| `increment`  | `5`           | Points transferred per interaction                       |
+| `growthRate` | `0.2`         | Weight step per variant level (lower = faster unlock)    |
+| `variants`   | `['default']` | Ordered variant names, least to most prominent           |
 
-```
-variantIndex = Math.min(floor(clicks / growthRate), variants.length - 1)
-```
+All options are optional. The constructor throws if `budget`, `increment`, or `growthRate` are non-positive, or if `variants` is empty.
 
-Define as many or as few as you need:
+## API reference
+
+### `new BehaviouralEngine(config?)`
+
+Creates a new engine. All config fields are optional and fall back to defaults.
+
+### `register(id: string, initialScore?: number): void`
+
+Registers a widget. Throws if `id` is already registered. If `initialScore` is omitted the widget starts at `0` and is assigned an equal share when scores are first normalized.
+
+### `record(id: string): void`
+
+Records one interaction on `id`. Redistributes the budget and fires `'change'` listeners. Throws if `id` is not registered.
+
+### `getState(): WidgetState[]`
+
+Returns the current state of all widgets in **registration order**. The array is not sorted by score.
+
+### `getWidget(id: string): WidgetState`
+
+Returns the current state of a single widget. Throws if `id` is not registered.
+
+### `export(): AdaptiveState`
+
+Returns a plain, JSON-serializable snapshot of the engine state. See [Persistence](#persistence).
+
+### `import(state: AdaptiveState): void`
+
+Restores from a snapshot. Widgets in the engine that are absent from the snapshot retain their current scores; the scores are then renormalized. Widgets in the snapshot that are not registered in the engine are ignored. Throws on unsupported `version` values.
+
+### `reset(): void`
+
+Resets all widgets to their initial scores and zeroes click counts. Fires `'change'` listeners.
+
+### `on(event: 'change', cb: (states: WidgetState[]) => void): void`
+
+Subscribes to state changes. `cb` is called after every `record`, `import`, and `reset`.
+
+### `off(event: 'change', cb: (states: WidgetState[]) => void): void`
+
+Unsubscribes a previously registered listener.
+
+### `destroy(): void`
+
+Removes all listeners. Call this when tearing down a component to prevent memory leaks.
+
+## WidgetState shape
 
 ```typescript
-// Two variants — simple toggle
-{ variants: ['small', 'large'], growthRate: 3 }
-
-// Five variants — gradual progression
-{ variants: ['xs', 'sm', 'md', 'lg', 'xl'], growthRate: 4 }
+interface WidgetState {
+  id: string;      // widget identifier
+  score: number;   // raw score (sums to budget across all widgets)
+  weight: number;  // score / budget, range 0–1
+  clicks: number;  // total interactions recorded since last reset
+  variant: string; // active variant name from your variants array
+}
 ```
 
-The variant is just a string. What it means in your CSS is entirely up to you.
+There is no `order` field. If you need a sorted list, sort `getState()` yourself:
+
+```typescript
+const ranked = engine.getState().sort((a, b) => b.score - a.score);
+```
+
+## Styling
+
+This library produces **data, not DOM**. Wiring state to your UI is your responsibility.
+
+| Engine output | Suggested UI mapping                                                      |
+|---|---|
+| `weight` (0–1)  | Size the widget: `flex-grow`, `grid-column: span N`, width percentage   |
+| `variant`       | Apply a CSS class: `.widget--compact`, `.widget--standard`, etc.        |
+| `clicks > 0`    | Progressive disclosure: reveal detail layers after first interaction    |
+
+Example — flex layout that grows widgets proportionally:
+
+```typescript
+engine.on('change', (states) => {
+  for (const s of states) {
+    const el = document.getElementById(s.id)!;
+    el.className = `widget widget--${s.variant}`;
+    el.style.flexGrow = String(s.weight * states.length);
+  }
+});
+```
+
+Recommended CSS transitions so size and style changes animate smoothly:
+
+```css
+.widget {
+  transition: flex-grow 0.4s ease, min-height 0.4s ease;
+}
+```
 
 ## Persistence
 
-The engine exports a plain JSON object you can store anywhere:
-
-```typescript
-// Save
-const state = engine.export();
-localStorage.setItem('dashboard', JSON.stringify(state));
-
-// Restore
-const saved = JSON.parse(localStorage.getItem('dashboard')!);
-engine.import(saved);
-```
-
-The `AdaptiveState` shape:
+`export()` returns an `AdaptiveState` object you can serialize and store anywhere:
 
 ```typescript
 interface AdaptiveState {
   version: 1;
-  userId?: string;
   widgets: Array<{ id: string; score: number; clicks: number }>;
-  lastInteraction: number;
+  lastInteraction: number; // Unix timestamp (ms) of the most recent record() call
 }
 ```
 
-Send it to a REST API, store it in IndexedDB, sync it across devices — that's your call.
+Example with `localStorage`:
 
-## Styling (your responsibility)
+```typescript
+// Save after every change
+engine.on('change', () => {
+  localStorage.setItem('dashboard', JSON.stringify(engine.export()));
+});
 
-This library produces **data, not DOM**. Here's what to wire up:
-
-| Engine output | What to do in your UI |
-|---|---|
-| `weight` (0–1) | Size the widget: `flex-grow`, `grid-column: span N`, width percentage |
-| `variant` | Apply a CSS class: `.widget--compact`, `.widget--expanded`, etc. |
-| `order` (0 = top) | Sort position: CSS `order`, DOM reorder, grid placement |
-| `clicks > 0` | Show additional detail layers (progressive disclosure) |
-
-Recommended CSS transitions:
-
-```css
-.widget {
-  transition: flex-grow 0.4s ease, min-height 0.4s ease, border-color 0.4s ease;
+// Restore on page load
+const raw = localStorage.getItem('dashboard');
+if (raw) {
+  engine.import(JSON.parse(raw));
 }
 ```
 
-## Configuration
+The same pattern works with `IndexedDB`, a REST endpoint, or any other store — `AdaptiveState` is plain JSON with no class instances or circular references.
 
-| Option | Default | Description |
-|---|---|---|
-| `budget` | `100` | Total score pool across all widgets |
-| `increment` | `5` | Score transferred per interaction |
-| `growthRate` | `5` | Clicks needed to advance one variant level |
-| `variants` | `['default']` | Ordered variant names, least to most prominent |
+## Demo
 
-## API
-
-| Method | Description |
-|---|---|
-| `register(id, initialScore?)` | Add a widget. Optional score for default layout. |
-| `record(id)` | Record an interaction. Redistributes budget. |
-| `getState()` | All widget states, sorted by score descending. |
-| `getWidget(id)` | Single widget state. |
-| `export()` | Serializable JSON snapshot. |
-| `import(state)` | Restore from snapshot. |
-| `reset()` | Return to initial scores, zero clicks. |
-| `on('change', cb)` | Subscribe to state changes. |
-| `off('change', cb)` | Unsubscribe. |
-| `destroy()` | Remove all listeners. |
+[ricardomonteirosimoes.github.io/behavioural-dashboard](https://ricardomonteirosimoes.github.io/behavioural-dashboard/)
 
 ## Attribution
 
