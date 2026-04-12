@@ -8,7 +8,10 @@
     "sourceMap": true,
     "strict": true,
     "esModuleInterop": true,
-    "skipLibCheck": true
+    "skipLibCheck": true,
+    "paths": {
+      "behavioural-dashboard": ["./src/index.ts"]
+    }
   },
   "include": ["src", "demo"]
 }
