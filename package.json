@@ -1,0 +1,62 @@
+{
+  "name": "behavioural-dashboard",
+  "version": "0.1.0",
+  "description": "Framework-agnostic TypeScript engine for self-adapting UI layouts based on user behaviour",
+  "type": "module",
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "lint": "eslint src/ demo/",
+    "lint:fix": "eslint src/ demo/ --fix",
+    "format": "prettier --write src/ demo/",
+    "format:check": "prettier --check src/ demo/",
+    "knip": "knip",
+    "duplication": "jscpd src/",
+    "test": "vitest run",
+    "check": "tsc --noEmit && eslint src/ demo/ && prettier --check src/ demo/ && knip && jscpd src/ && vitest run",
+    "demo": "vite",
+    "demo:build": "vite build",
+    "demo:preview": "vite preview",
+    "prepublishOnly": "npm run build"
+  },
+  "keywords": [
+    "behavioural-ui",
+    "adaptive-dashboard",
+    "interaction-tracking",
+    "progressive-disclosure",
+    "zero-sum-budget",
+    "typescript",
+    "framework-agnostic"
+  ],
+  "author": "Ricardo Monteiro Simoes",
+  "license": "MIT",
+  "homepage": "https://ricardomonteirosimoes.github.io/behavioural-dashboard/",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/RicardoMonteiroSimoes/behavioural-dashboard.git"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.27.0",
+    "eslint": "^9.27.0",
+    "eslint-config-prettier": "^10.1.5",
+    "jscpd": "^4.0.5",
+    "knip": "^5.57.2",
+    "prettier": "^3.5.3",
+    "typescript": "^5.8.3",
+    "typescript-eslint": "^8.32.1",
+    "vite": "^6.3.5",
+    "vitest": "^3.1.4",
+    "happy-dom": "^18.0.1"
+  }
+}
