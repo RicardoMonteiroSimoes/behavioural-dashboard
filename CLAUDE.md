@@ -30,6 +30,12 @@ npm run knip          # unused code detection
 npm run duplication   # copy-paste detection
 ```
 
+## Releasing
+
+1. Bump the version in `package.json` manually
+2. Commit and push
+3. Create a GitHub release (e.g. `gh release create 0.x.y`) — this triggers the npm publish and GitHub Pages deploy workflows
+
 ## Rules
 
 - ESM-only, no CommonJS
