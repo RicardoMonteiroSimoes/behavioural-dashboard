@@ -140,6 +140,10 @@
         background: var(--text-p);
         color: var(--bg);
       }
+      .reset-btn:focus-visible {
+        outline: 2px solid var(--accent);
+        outline-offset: 2px;
+      }
 
       /* ── Layout tabs ─────────────────────────────────────────────────── */
       .controls-row {
@@ -182,6 +186,10 @@
       .tab-btn:not(.active):hover {
         background: var(--surface);
         color: var(--text-p);
+      }
+      .tab-btn:focus-visible {
+        outline: 2px solid var(--accent);
+        outline-offset: 2px;
       }
 
       /* ── Sliders ─────────────────────────────────────────────────────── */
@@ -230,6 +238,10 @@
         background: var(--text-p);
         color: var(--bg);
       }
+      .config-toggle:focus-visible {
+        outline: 2px solid var(--accent);
+        outline-offset: 2px;
+      }
       .config-panel {
         overflow: hidden;
         max-height: 0;
@@ -241,7 +253,7 @@
         margin-bottom: 0;
       }
       .config-panel.open {
-        max-height: 200px;
+        max-height: 400px;
         opacity: 1;
         margin-bottom: 12px;
       }
@@ -365,6 +377,10 @@
       .widget:active {
         transform: translate(1px, 1px);
         box-shadow: none;
+      }
+      .widget:focus-visible {
+        outline: 2px solid var(--accent);
+        outline-offset: 2px;
       }
 
       /* Variants — differentiated by border weight only, no background color changes */
@@ -747,122 +763,129 @@
       <span class="header-label">Click widgets to see adaptation</span>
     </header>
 
-    <div class="playground">
-      <div class="toolbar">
-        <span class="status" id="status">Ready — click any widget</span>
-        <div style="display: flex; gap: 8px; align-items: center">
-          <button class="config-toggle" id="config-toggle">
-            Engine config
-          </button>
-          <button class="reset-btn" id="reset-btn">Reset</button>
-        </div>
-      </div>
-
-      <div class="config-panel" id="config-panel">
-        <div class="config-inner">
-          <div class="slider-group">
-            <span class="slider-label">Budget</span>
-            <input
-              type="range"
-              id="cfg-budget"
-              min="20"
-              max="200"
-              step="10"
-              value="100"
-            />
-            <span class="slider-val" id="cfg-budget-val">100</span>
+    <main>
+      <div class="playground">
+        <div class="toolbar">
+          <span class="status" id="status">Ready — click any widget</span>
+          <div style="display: flex; gap: 8px; align-items: center">
+            <button class="config-toggle" id="config-toggle">
+              Engine config
+            </button>
+            <button class="reset-btn" id="reset-btn">Reset</button>
           </div>
-          <div class="slider-group">
-            <span class="slider-label">Increment</span>
+        </div>
+
+        <div class="config-panel" id="config-panel">
+          <div class="config-inner">
+            <div class="slider-group">
+              <span class="slider-label">Budget</span>
+              <input
+                type="range"
+                id="cfg-budget"
+                min="20"
+                max="200"
+                step="10"
+                value="100"
+                aria-label="Budget"
+              />
+              <span class="slider-val" id="cfg-budget-val">100</span>
+            </div>
+            <div class="slider-group">
+              <span class="slider-label">Increment</span>
+              <input
+                type="range"
+                id="cfg-increment"
+                min="1"
+                max="20"
+                step="1"
+                value="5"
+                aria-label="Increment"
+              />
+              <span class="slider-val" id="cfg-increment-val">5</span>
+            </div>
+            <div class="slider-group">
+              <span class="slider-label">Growth rate</span>
+              <input
+                type="range"
+                id="cfg-growth"
+                min="0.05"
+                max="0.5"
+                step="0.05"
+                value="0.1"
+                aria-label="Growth rate"
+              />
+              <span class="slider-val" id="cfg-growth-val">0.1</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="controls-row">
+          <div class="tab-group" id="content-tabs">
+            <button class="tab-btn active" data-content="abstract">
+              Abstract
+            </button>
+            <button class="tab-btn" data-content="dashboard">Dashboard</button>
+          </div>
+          <div class="tab-group" id="layout-tabs">
+            <button class="tab-btn active" data-layout="flex-row">
+              Flex row
+            </button>
+            <button class="tab-btn" data-layout="flex-wrap">Flex wrap</button>
+            <button class="tab-btn" data-layout="grid-cols">Grid</button>
+            <button class="tab-btn" data-layout="vertical">Vertical</button>
+            <button class="tab-btn" data-layout="equal">Equal grid</button>
+          </div>
+          <div class="slider-group" id="cols-slider" style="display: none">
+            <span class="slider-label">Columns</span>
             <input
               type="range"
-              id="cfg-increment"
-              min="1"
-              max="20"
+              id="grid-cols"
+              min="2"
+              max="6"
               step="1"
-              value="5"
+              value="3"
+              aria-label="Grid columns"
             />
-            <span class="slider-val" id="cfg-increment-val">5</span>
+            <span class="slider-val" id="grid-cols-val">3</span>
           </div>
           <div class="slider-group">
-            <span class="slider-label">Growth rate</span>
+            <span class="slider-label">Gap</span>
             <input
               type="range"
-              id="cfg-growth"
-              min="0.05"
-              max="0.5"
-              step="0.05"
-              value="0.1"
+              id="grid-gap"
+              min="0"
+              max="24"
+              step="2"
+              value="10"
+              aria-label="Grid gap"
             />
-            <span class="slider-val" id="cfg-growth-val">0.1</span>
+            <span class="slider-val" id="grid-gap-val">10</span>
+          </div>
+        </div>
+
+        <div class="shell">
+          <div class="topbar">
+            <span class="ttl" id="shell-ttl">Playground</span>
+            <div class="topbar-rule"></div>
+          </div>
+          <div class="grid layout-flex-row" id="grid"></div>
+        </div>
+
+        <div class="state-panel">
+          <div class="panel-header">Budget distribution</div>
+          <div class="panel-body">
+            <div class="budget-bars" id="budget-bars"></div>
+          </div>
+        </div>
+
+        <div class="state-panel" style="margin-top: 10px">
+          <div class="panel-header">Engine state (JSON)</div>
+          <div class="panel-body" style="padding: 0">
+            <div class="json-dump" id="json-dump"></div>
           </div>
         </div>
       </div>
-
-      <div class="controls-row">
-        <div class="tab-group" id="content-tabs">
-          <button class="tab-btn active" data-content="abstract">
-            Abstract
-          </button>
-          <button class="tab-btn" data-content="dashboard">Dashboard</button>
-        </div>
-        <div class="tab-group" id="layout-tabs">
-          <button class="tab-btn active" data-layout="flex-row">
-            Flex row
-          </button>
-          <button class="tab-btn" data-layout="flex-wrap">Flex wrap</button>
-          <button class="tab-btn" data-layout="grid-cols">Grid</button>
-          <button class="tab-btn" data-layout="vertical">Vertical</button>
-          <button class="tab-btn" data-layout="equal">Equal grid</button>
-        </div>
-        <div class="slider-group" id="cols-slider" style="display: none">
-          <span class="slider-label">Columns</span>
-          <input
-            type="range"
-            id="grid-cols"
-            min="2"
-            max="6"
-            step="1"
-            value="3"
-          />
-          <span class="slider-val" id="grid-cols-val">3</span>
-        </div>
-        <div class="slider-group">
-          <span class="slider-label">Gap</span>
-          <input
-            type="range"
-            id="grid-gap"
-            min="0"
-            max="24"
-            step="2"
-            value="10"
-          />
-          <span class="slider-val" id="grid-gap-val">10</span>
-        </div>
-      </div>
-
-      <div class="shell">
-        <div class="topbar">
-          <span class="ttl" id="shell-ttl">Playground</span>
-          <div class="topbar-rule"></div>
-        </div>
-        <div class="grid layout-flex-row" id="grid"></div>
-      </div>
-
-      <div class="state-panel">
-        <div class="panel-header">Budget distribution</div>
-        <div class="panel-body">
-          <div class="budget-bars" id="budget-bars"></div>
-        </div>
-      </div>
-
-      <div class="state-panel" style="margin-top: 10px">
-        <div class="panel-header">Engine state (JSON)</div>
-        <div class="panel-body" style="padding: 0">
-          <div class="json-dump" id="json-dump"></div>
-        </div>
-      </div>
-    </div>
+    </main>
 
     <footer>
       <p>

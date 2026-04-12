@@ -261,6 +261,15 @@ function createAbstractWidgetEl(id: string): HTMLElement {
   inner.append(label, score, variantTag, reveal);
   el.append(accent, inner);
 
+  el.setAttribute('tabindex', '0');
+  el.setAttribute('role', 'button');
+  el.setAttribute('aria-label', id);
+  el.addEventListener('keydown', (e: KeyboardEvent) => {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      el.click();
+    }
+  });
   el.addEventListener('click', () => engine.record(id));
   return el;
 }
@@ -333,6 +342,15 @@ function createDashboardWidgetEl(mock: MockWidget): HTMLElement {
   inner.append(label, score, r1, r2, r3);
   el.append(accent, inner);
 
+  el.setAttribute('tabindex', '0');
+  el.setAttribute('role', 'button');
+  el.setAttribute('aria-label', mock.label);
+  el.addEventListener('keydown', (e: KeyboardEvent) => {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      el.click();
+    }
+  });
   el.addEventListener('click', () => engine.record(mock.id));
   return el;
 }
@@ -364,8 +382,8 @@ function createBudgetRow(id: string, label: string): HTMLElement {
 // --- Build DOM ---
 
 function buildWidgets(): void {
-  gridEl.innerHTML = '';
-  budgetBarsEl.innerHTML = '';
+  gridEl.replaceChildren();
+  budgetBarsEl.replaceChildren();
 
   if (contentMode === 'abstract') {
     for (const name of ABSTRACT_WIDGETS) {
@@ -401,7 +419,9 @@ function applyLayout(): void {
 function applyLayoutSizing(states: WidgetState[]): void {
   const count = states.length;
   for (const state of states) {
-    const el = gridEl.querySelector(`[data-id="${state.id}"]`) as HTMLElement;
+    const el = gridEl.querySelector(
+      `[data-id="${CSS.escape(state.id)}"]`,
+    ) as HTMLElement;
     if (!el) continue;
 
     el.style.flexGrow = '';
@@ -437,9 +457,10 @@ function applyLayoutSizing(states: WidgetState[]): void {
 // --- Render ---
 
 function render(states: WidgetState[]): void {
+  if (states.length === 0) return;
   for (const state of states) {
     const widgetEl = gridEl.querySelector(
-      `[data-id="${state.id}"]`,
+      `[data-id="${CSS.escape(state.id)}"]`,
     ) as HTMLElement;
     if (!widgetEl) continue;
 
@@ -483,7 +504,7 @@ function render(states: WidgetState[]): void {
     }
 
     const budgetRow = budgetBarsEl.querySelector(
-      `[data-id="${state.id}"]`,
+      `[data-id="${CSS.escape(state.id)}"]`,
     ) as HTMLElement;
     if (budgetRow) {
       (budgetRow.querySelector('.budget-fill') as HTMLElement).style.width =
