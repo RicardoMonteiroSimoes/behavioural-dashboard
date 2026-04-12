@@ -760,6 +760,19 @@
         default layout showing how implementers define a curated starting point
         that adapts over time.
       </p>
+      <p class="lede">
+        <strong>How this differs from the original.</strong> Tanvi Palkar's demo
+        includes a pin feature that locks a widget in place regardless of its
+        score. This library deliberately omits pinning — it is a UI concern, not
+        an engine concern. Implementers can freeze a widget's position with CSS
+        (<code>order</code> property) or simply exclude it from any sorting
+        pass. The engine has no opinion on it. <br /><br />
+        The engine also returns widgets in <em>registration order</em>, not
+        sorted by score. That gives consumers two strategies: keep the original
+        order and let only size and variant change, or sort by score so
+        frequently-used widgets float to the top. The toggle below demonstrates
+        both approaches.
+      </p>
       <span class="header-label">Click widgets to see adaptation</span>
     </header>
 
@@ -825,6 +838,14 @@
               Abstract
             </button>
             <button class="tab-btn" data-content="dashboard">Dashboard</button>
+          </div>
+          <div class="tab-group" id="order-tabs">
+            <button class="tab-btn active" data-order="registration">
+              Registration order
+            </button>
+            <button class="tab-btn" data-order="score">
+              Auto sort by score
+            </button>
           </div>
           <div class="tab-group" id="layout-tabs">
             <button class="tab-btn active" data-layout="flex-row">

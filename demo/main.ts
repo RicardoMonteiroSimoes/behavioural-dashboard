@@ -127,6 +127,7 @@ const LAYOUTS = ['flex-row', 'flex-wrap', 'grid-cols', 'vertical', 'equal'];
 
 let contentMode: 'abstract' | 'dashboard' = 'abstract';
 let currentLayout = 'flex-row';
+let currentOrder: 'registration' | 'score' = 'registration';
 let gridCols = 3;
 
 let engine = createEngine(100, 5, 0.1);
@@ -167,6 +168,7 @@ const jsonDumpEl = getEl('json-dump');
 const resetBtn = getEl('reset-btn');
 const layoutTabs = getEl('layout-tabs');
 const contentTabs = getEl('content-tabs');
+const orderTabs = getEl('order-tabs');
 const colsSlider = getEl('cols-slider');
 const gridColsInput = getEl('grid-cols') as HTMLInputElement;
 const gridColsVal = getEl('grid-cols-val');
@@ -516,6 +518,25 @@ function render(states: WidgetState[]): void {
 
   applyLayoutSizing(states);
 
+  // Reorder grid children based on currentOrder
+  if (currentOrder === 'score') {
+    const sorted = [...states].sort((a, b) => b.score - a.score);
+    for (const s of sorted) {
+      const el = gridEl.querySelector(`[data-id="${CSS.escape(s.id)}"]`);
+      if (el) gridEl.appendChild(el);
+    }
+  } else {
+    // Restore registration order using the defaults arrays
+    const registrationOrder =
+      contentMode === 'abstract'
+        ? ABSTRACT_DEFAULTS.map((d) => d.id)
+        : DASHBOARD_DEFAULTS.map((d) => d.id);
+    for (const id of registrationOrder) {
+      const el = gridEl.querySelector(`[data-id="${CSS.escape(id)}"]`);
+      if (el) gridEl.appendChild(el);
+    }
+  }
+
   const exported = engine.export();
   jsonDumpEl.textContent = JSON.stringify(exported, null, 2);
   localStorage.setItem(STORAGE_KEY, JSON.stringify(exported));
@@ -622,6 +643,20 @@ layoutTabs.addEventListener('click', (e) => {
   btn.classList.add('active');
   currentLayout = layout;
   applyLayout();
+  render(engine.getState());
+});
+
+// Order tabs
+orderTabs.addEventListener('click', (e) => {
+  const btn = (e.target as HTMLElement).closest('.tab-btn') as HTMLElement;
+  if (!btn?.dataset.order) return;
+  const order = btn.dataset.order;
+  if (order !== 'registration' && order !== 'score') return;
+  orderTabs
+    .querySelectorAll('.tab-btn')
+    .forEach((b) => b.classList.remove('active'));
+  btn.classList.add('active');
+  currentOrder = order;
   render(engine.getState());
 });
 

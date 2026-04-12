@@ -1,6 +1,10 @@
 # behavioural-dashboard
 
+[![npm](https://img.shields.io/npm/v/behavioural-dashboard)](https://www.npmjs.com/package/behavioural-dashboard)
+
 A framework-agnostic TypeScript engine that tracks user interaction patterns and outputs serializable state for adaptive UIs. No DOM manipulation, no CSS, no framework lock-in — just behavioural primitives you wire into your own components.
+
+[Live demo](https://ricardomonteirosimoes.github.io/behavioural-dashboard/) · [npm package](https://www.npmjs.com/package/behavioural-dashboard)
 
 > **ESM only.** This package ships ES modules exclusively. It requires a bundler or a runtime that supports `"type": "module"`.
 
