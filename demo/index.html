@@ -1,0 +1,435 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>behavioural-dashboard — playground</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg: #FAFAFA;
+      --surface: #F5F5F5;
+      --text-p: #000000;
+      --text-s: #555555;
+      --text-t: #999999;
+      --accent: #E85D04;
+      --accent-l: rgba(232,93,4,0.08);
+      --border-col: #000000;
+      --border: 2px solid #000000;
+      --border-thin: 1px solid #000000;
+      --border-thick: 3px solid #000000;
+    }
+    body {
+      font-family: 'Inter', system-ui, sans-serif;
+      background: var(--bg); color: var(--text-p);
+      min-height: 100vh; display: flex; flex-direction: column; align-items: center;
+      padding: 48px 24px 80px;
+    }
+
+    /* ── Page Header ─────────────────────────────────────────────────── */
+    .page-header { max-width: 720px; text-align: left; margin-bottom: 40px; width: 100%; }
+    .eyebrow {
+      font-size: 11px; font-weight: 800; letter-spacing: 0.14em;
+      text-transform: uppercase; color: var(--text-t); margin-bottom: 16px;
+    }
+    h1 {
+      font-size: clamp(32px, 5vw, 56px); font-weight: 800;
+      line-height: 1.05; letter-spacing: -0.03em; margin-bottom: 20px;
+      text-transform: uppercase;
+    }
+    h1 em { font-style: normal; color: var(--accent); }
+    .lede {
+      font-size: 14px; line-height: 1.75; color: var(--text-s);
+      max-width: 600px; margin-bottom: 16px;
+    }
+    .lede-key {
+      font-size: 14px; line-height: 1.75; color: var(--text-s);
+      max-width: 600px; margin-bottom: 16px;
+      border-left: 4px solid var(--accent); padding-left: 16px;
+    }
+    .header-label {
+      display: inline-block; font-size: 10px; font-weight: 800;
+      letter-spacing: 0.12em; text-transform: uppercase;
+      color: var(--text-t); margin-top: 8px;
+      border-top: var(--border-thin); padding-top: 10px;
+    }
+
+    /* ── Playground wrapper ──────────────────────────────────────────── */
+    .playground { width: 100%; max-width: 900px; }
+
+    /* ── Toolbar ─────────────────────────────────────────────────────── */
+    .toolbar {
+      display: flex; align-items: center; justify-content: space-between;
+      margin-bottom: 12px; flex-wrap: wrap; gap: 8px;
+      border-bottom: var(--border-thin); padding-bottom: 10px;
+    }
+    .status {
+      font-size: 11px; color: var(--text-s);
+      font-family: ui-monospace, 'Cascadia Code', 'Fira Mono', monospace;
+      font-weight: 400; letter-spacing: 0.02em;
+    }
+    .reset-btn {
+      font-size: 10px; font-weight: 800; letter-spacing: 0.1em;
+      text-transform: uppercase; color: var(--text-p); background: none;
+      border: var(--border-thin); border-radius: 0;
+      padding: 5px 14px; cursor: pointer; transition: background 0.15s, color 0.15s;
+    }
+    .reset-btn:hover { background: var(--text-p); color: var(--bg); }
+
+    /* ── Layout tabs ─────────────────────────────────────────────────── */
+    .controls-row {
+      display: flex; align-items: center; gap: 8px;
+      margin-bottom: 12px; flex-wrap: wrap;
+    }
+    .tab-group {
+      display: flex; align-items: stretch; gap: 0;
+      border: var(--border-thin); background: none;
+    }
+    .tab-btn {
+      font-size: 10px; font-weight: 800; letter-spacing: 0.08em;
+      text-transform: uppercase; padding: 6px 13px;
+      border: none; border-right: var(--border-thin);
+      cursor: pointer; background: transparent; color: var(--text-t);
+      transition: background 0.1s, color 0.1s; white-space: nowrap;
+    }
+    .tab-btn:last-child { border-right: none; }
+    .tab-btn.active { background: var(--text-p); color: #FFFFFF; }
+    .tab-btn:not(.active):hover { background: var(--surface); color: var(--text-p); }
+
+    /* ── Sliders ─────────────────────────────────────────────────────── */
+    .slider-group { display: flex; align-items: center; gap: 8px; }
+    .slider-label {
+      font-size: 10px; font-weight: 800; letter-spacing: 0.08em;
+      text-transform: uppercase; color: var(--text-t); white-space: nowrap;
+    }
+    .slider-val {
+      font-size: 11px;
+      font-family: ui-monospace, 'Cascadia Code', 'Fira Mono', monospace;
+      color: var(--text-s); min-width: 24px; text-align: center;
+    }
+    input[type="range"] { width: 80px; accent-color: var(--accent); }
+
+    /* ── Config panel ────────────────────────────────────────────────── */
+    .config-toggle {
+      font-size: 10px; font-weight: 800; letter-spacing: 0.08em;
+      text-transform: uppercase; color: var(--text-p); background: none;
+      border: var(--border-thin); border-radius: 0;
+      padding: 5px 12px; cursor: pointer; transition: background 0.15s, color 0.15s;
+    }
+    .config-toggle:hover { background: var(--text-p); color: var(--bg); }
+    .config-panel {
+      overflow: hidden; max-height: 0; opacity: 0;
+      transition: max-height 0.4s cubic-bezier(0.4,0,0.2,1), opacity 0.35s ease, margin 0.3s;
+      margin-bottom: 0;
+    }
+    .config-panel.open { max-height: 200px; opacity: 1; margin-bottom: 12px; }
+    .config-inner {
+      display: flex; gap: 20px; flex-wrap: wrap; padding: 12px 16px;
+      background: var(--surface); border: var(--border-thin);
+      border-radius: 0;
+    }
+
+    /* ── Shell / grid container ──────────────────────────────────────── */
+    .shell {
+      border: var(--border); border-radius: 0;
+      overflow: hidden; background: #FFFFFF;
+    }
+    .topbar {
+      background: var(--text-p); border-bottom: var(--border);
+      padding: 10px 18px; display: flex; align-items: center; gap: 10px;
+    }
+    .ttl {
+      font-size: 10px; font-weight: 800; color: #FFFFFF;
+      letter-spacing: 0.12em; text-transform: uppercase;
+    }
+    /* Replace traffic-light dots with a simple rule indicator */
+    .topbar-rule { flex: 1; height: 1px; background: rgba(255,255,255,0.15); }
+
+    .grid { padding: 12px; gap: 10px; transition: gap 0.3s; }
+
+    /* Layout: flex-row */
+    .grid.layout-flex-row { display: flex; flex-direction: row; align-items: stretch; }
+    .grid.layout-flex-row .widget { flex-basis: 0; min-width: 80px; }
+
+    /* Layout: flex-wrap */
+    .grid.layout-flex-wrap { display: flex; flex-wrap: wrap; align-items: stretch; }
+    .grid.layout-flex-wrap .widget { flex-basis: 120px; min-width: 100px; }
+
+    /* Layout: grid-columns */
+    .grid.layout-grid-cols { display: grid; }
+
+    /* Layout: vertical-stack */
+    .grid.layout-vertical { display: flex; flex-direction: column; }
+    .grid.layout-vertical .widget { flex-basis: auto; }
+    .grid.layout-vertical .widget.variant-compact,
+    .grid.layout-vertical .widget.variant-standard,
+    .grid.layout-vertical .widget.variant-expanded,
+    .grid.layout-vertical .widget.variant-full { min-height: 60px; }
+
+    /* Layout: equal-grid */
+    .grid.layout-equal { display: grid; }
+    .grid.layout-equal .widget { min-height: 100px; }
+
+    /* ── Widget base ─────────────────────────────────────────────────── */
+    .widget {
+      border-radius: 0;
+      border: var(--border-thin);
+      background: #FFFFFF; cursor: pointer; position: relative;
+      overflow: hidden; display: flex; flex-direction: column;
+      transition: flex-grow 0.4s ease, flex-basis 0.4s ease, min-height 0.4s ease,
+                  border-width 0.4s, box-shadow 0.15s;
+      min-height: 80px;
+    }
+    .widget:hover { box-shadow: 3px 3px 0 var(--border-col); }
+    .widget:active { transform: translate(1px, 1px); box-shadow: none; }
+
+    /* Variants — differentiated by border weight only, no background color changes */
+    .widget.variant-compact { min-height: 80px; border: var(--border-thin); }
+    .widget.variant-standard { min-height: 110px; border: var(--border); }
+    .widget.variant-expanded { min-height: 150px; border: var(--border); }
+    .widget.variant-full { min-height: 200px; border: var(--border-thick); }
+
+    /* Accent bar — shown for standard+ */
+    .widget.variant-standard .accent,
+    .widget.variant-expanded .accent,
+    .widget.variant-full .accent { width: 4px; }
+
+    .accent {
+      position: absolute; left: 0; top: 0; bottom: 0; width: 0;
+      background: var(--accent);
+      transition: width 0.4s;
+    }
+
+    /* Full variant top stripe */
+    .widget.variant-full::before {
+      content: ''; display: block;
+      position: absolute; top: 0; left: 0; right: 0;
+      height: 3px; background: var(--accent); z-index: 1;
+    }
+
+    .w-inner { padding: 14px 16px; flex: 1; display: flex; flex-direction: column; }
+
+    .w-label {
+      font-size: 9px; font-weight: 800; letter-spacing: 0.12em;
+      text-transform: uppercase; color: var(--text-t); margin-bottom: 6px;
+    }
+
+    .w-score {
+      font-size: 22px; font-weight: 400; color: var(--text-p); line-height: 1;
+      font-family: ui-monospace, 'Cascadia Code', 'Fira Mono', monospace;
+      transition: font-size 0.4s;
+    }
+
+    .w-variant-tag {
+      display: inline-block; font-size: 9px; font-weight: 800; letter-spacing: 0.1em;
+      text-transform: uppercase; padding: 2px 6px; margin-top: 6px;
+      border: var(--border-thin); color: var(--text-t); background: none;
+    }
+    /* Accent the active variant tag for standard+ */
+    .widget.variant-standard .w-variant-tag,
+    .widget.variant-expanded .w-variant-tag,
+    .widget.variant-full .w-variant-tag {
+      border-color: var(--accent); color: var(--accent);
+    }
+
+    .w-meta { font-size: 11px; color: var(--text-t); margin-top: 8px; line-height: 1.5; }
+
+    .w-bar {
+      height: 2px; border-radius: 0;
+      background: var(--surface); margin-top: 10px; overflow: hidden;
+    }
+    .w-bar-fill {
+      height: 100%; background: var(--accent); transition: width 0.4s;
+    }
+
+    .reveal {
+      overflow: hidden;
+      transition: max-height 0.45s cubic-bezier(0.4,0,0.2,1), opacity 0.4s;
+      max-height: 0; opacity: 0;
+    }
+    .reveal.show { max-height: 220px; opacity: 1; }
+
+    /* ── Dashboard widget extras ─────────────────────────────────────── */
+    .w-trend { display: flex; align-items: center; gap: 5px; font-size: 11px; color: var(--text-t); margin-top: 4px; }
+    .w-trend .up { color: var(--accent); font-weight: 800; }
+    .w-trend .dn { color: var(--text-p); font-weight: 800; }
+
+    .w-sparkline { margin-top: 8px; }
+    .w-sparkline svg { display: block; width: 100%; height: 32px; }
+
+    .w-detail-rows { margin-top: 8px; }
+    .w-detail-row {
+      display: flex; justify-content: space-between; align-items: baseline;
+      padding: 4px 0;
+    }
+    .w-detail-row:not(:last-child) { border-bottom: var(--border-thin); }
+    .w-dl { font-size: 10px; color: var(--text-t); text-transform: uppercase; letter-spacing: 0.06em; }
+    .w-dv {
+      font-size: 11px; font-weight: 600; color: var(--text-p);
+      font-family: ui-monospace, 'Cascadia Code', 'Fira Mono', monospace;
+    }
+
+    .w-tag {
+      display: inline-block; font-size: 9px; font-weight: 800;
+      letter-spacing: 0.1em; text-transform: uppercase;
+      padding: 2px 8px; margin-top: 6px; border-radius: 0;
+      border: var(--border-thin);
+    }
+    .w-tag.tg-green { background: none; color: var(--accent); border-color: var(--accent); }
+    .w-tag.tg-amber { background: none; color: #B45309; border-color: #B45309; }
+    .w-tag.tg-red   { background: none; color: #B91C1C; border-color: #B91C1C; }
+
+    .w-divider { height: 1px; background: #E5E5E5; margin: 8px 0; }
+
+    /* ── State panels ────────────────────────────────────────────────── */
+    .state-panel {
+      margin-top: 16px; border: var(--border); border-radius: 0;
+      background: #FFFFFF; overflow: hidden;
+    }
+    .panel-header {
+      padding: 9px 16px; background: var(--text-p);
+      font-size: 10px; font-weight: 800; letter-spacing: 0.1em;
+      text-transform: uppercase; color: #FFFFFF;
+    }
+    .panel-body { padding: 14px 16px; }
+
+    .budget-bars { display: flex; flex-direction: column; gap: 8px; }
+    .budget-row { display: flex; align-items: center; gap: 10px; }
+    .budget-label {
+      font-size: 10px; font-weight: 600; color: var(--text-s);
+      text-transform: uppercase; letter-spacing: 0.06em;
+      width: 80px; flex-shrink: 0;
+    }
+    .budget-track { flex: 1; height: 6px; background: var(--surface); overflow: hidden; border-radius: 0; }
+    .budget-fill { height: 100%; background: var(--accent); transition: width 0.4s; }
+    .budget-value {
+      font-size: 11px;
+      font-family: ui-monospace, 'Cascadia Code', 'Fira Mono', monospace;
+      color: var(--text-t); width: 50px; text-align: right;
+    }
+
+    .json-dump {
+      margin-top: 0; padding: 12px; background: var(--surface);
+      border-radius: 0; border: none;
+      font-family: ui-monospace, 'Cascadia Code', 'Fira Mono', monospace;
+      font-size: 11px; color: var(--text-s); white-space: pre-wrap;
+      max-height: 200px; overflow-y: auto;
+    }
+
+    /* ── Note / attribution block ────────────────────────────────────── */
+    .note {
+      margin-top: 14px; padding: 10px 16px;
+      background: none; border: var(--border-thin); border-radius: 0;
+      font-size: 12px; color: var(--text-t); line-height: 1.6;
+      display: flex; gap: 12px; max-width: 900px; width: 100%;
+    }
+    .note-pip { width: 4px; background: var(--accent); flex-shrink: 0; align-self: stretch; }
+
+    /* ── Footer ──────────────────────────────────────────────────────── */
+    footer {
+      margin-top: 48px; text-align: center;
+      font-size: 11px; font-weight: 800; letter-spacing: 0.08em;
+      text-transform: uppercase; color: var(--text-t); line-height: 1.8;
+      border-top: var(--border-thin); padding-top: 24px;
+      width: 100%; max-width: 900px;
+    }
+    footer a { color: var(--text-p); text-decoration: none; }
+    footer a:hover { color: var(--accent); }
+  </style>
+</head>
+<body>
+  <header class="page-header">
+    <div class="eyebrow">Library playground</div>
+    <h1>behavioural-<em>dashboard</em></h1>
+    <p class="lede">A framework-agnostic TypeScript engine that tracks interaction patterns and outputs adaptive UI state. Inspired by <a href="https://tanvin-alt.github.io/behavioural-dashboard/" target="_blank" rel="noopener" style="color:var(--accent);text-decoration:none;font-weight:600">Designing for the 100th Use</a> by <a href="https://www.linkedin.com/in/tanvi-palkar-ab9b159a/" target="_blank" rel="noopener" style="color:var(--accent);text-decoration:none;font-weight:600">Tanvi Palkar</a>.</p>
+    <p class="lede">The idea: UI elements that adapt to how each user actually works. Whatever their preferred workflow or visualization pattern, the system learns from their interactions and automatically promotes what matters most — no manual configuration needed.</p>
+    <p class="lede-key">Click any widget repeatedly. The engine redistributes a fixed score budget — as a widget's weight grows it advances through variants, and as it shrinks it drops back down. Both views start with a pre-seeded default layout showing how implementers define a curated starting point that adapts over time.</p>
+    <span class="header-label">Click widgets to see adaptation</span>
+  </header>
+
+  <div class="playground">
+    <div class="toolbar">
+      <span class="status" id="status">Ready — click any widget</span>
+      <div style="display:flex;gap:8px;align-items:center">
+        <button class="config-toggle" id="config-toggle">Engine config</button>
+        <button class="reset-btn" id="reset-btn">Reset</button>
+      </div>
+    </div>
+
+    <div class="config-panel" id="config-panel">
+      <div class="config-inner">
+        <div class="slider-group">
+          <span class="slider-label">Budget</span>
+          <input type="range" id="cfg-budget" min="20" max="200" step="10" value="100" />
+          <span class="slider-val" id="cfg-budget-val">100</span>
+        </div>
+        <div class="slider-group">
+          <span class="slider-label">Increment</span>
+          <input type="range" id="cfg-increment" min="1" max="20" step="1" value="5" />
+          <span class="slider-val" id="cfg-increment-val">5</span>
+        </div>
+        <div class="slider-group">
+          <span class="slider-label">Growth rate</span>
+          <input type="range" id="cfg-growth" min="0.05" max="0.5" step="0.05" value="0.1" />
+          <span class="slider-val" id="cfg-growth-val">0.1</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="controls-row">
+      <div class="tab-group" id="content-tabs">
+        <button class="tab-btn active" data-content="abstract">Abstract</button>
+        <button class="tab-btn" data-content="dashboard">Dashboard</button>
+      </div>
+      <div class="tab-group" id="layout-tabs">
+        <button class="tab-btn active" data-layout="flex-row">Flex row</button>
+        <button class="tab-btn" data-layout="flex-wrap">Flex wrap</button>
+        <button class="tab-btn" data-layout="grid-cols">Grid</button>
+        <button class="tab-btn" data-layout="vertical">Vertical</button>
+        <button class="tab-btn" data-layout="equal">Equal grid</button>
+      </div>
+      <div class="slider-group" id="cols-slider" style="display:none">
+        <span class="slider-label">Columns</span>
+        <input type="range" id="grid-cols" min="2" max="6" step="1" value="3" />
+        <span class="slider-val" id="grid-cols-val">3</span>
+      </div>
+      <div class="slider-group">
+        <span class="slider-label">Gap</span>
+        <input type="range" id="grid-gap" min="0" max="24" step="2" value="10" />
+        <span class="slider-val" id="grid-gap-val">10</span>
+      </div>
+    </div>
+
+    <div class="shell">
+      <div class="topbar">
+        <span class="ttl" id="shell-ttl">Playground</span>
+        <div class="topbar-rule"></div>
+      </div>
+      <div class="grid layout-flex-row" id="grid"></div>
+    </div>
+
+    <div class="state-panel">
+      <div class="panel-header">Budget distribution</div>
+      <div class="panel-body">
+        <div class="budget-bars" id="budget-bars"></div>
+      </div>
+    </div>
+
+    <div class="state-panel" style="margin-top: 10px;">
+      <div class="panel-header">Engine state (JSON)</div>
+      <div class="panel-body" style="padding:0">
+        <div class="json-dump" id="json-dump"></div>
+      </div>
+    </div>
+  </div>
+
+  <footer>
+    <p><a href="https://github.com/RicardoMonteiroSimoes/behavioural-dashboard" target="_blank" rel="noopener">GitHub</a></p>
+  </footer>
+
+  <script type="module" src="./main.ts"></script>
+</body>
+</html>
