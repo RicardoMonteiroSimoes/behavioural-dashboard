@@ -59,7 +59,25 @@ export class BehaviouralEngine {
     }
   }
 
-  register(id: string, initialScore?: number): void {
+  register(id: string, initialScore?: number): void;
+  register(widgets: { id: string; initialScore?: number }[]): void;
+  register(
+    idOrWidgets: string | { id: string; initialScore?: number }[],
+    initialScore?: number,
+  ): void {
+    if (Array.isArray(idOrWidgets)) {
+      for (const w of idOrWidgets) {
+        this.addWidget(w.id, w.initialScore);
+      }
+    } else {
+      this.addWidget(idOrWidgets, initialScore);
+    }
+    this.clampToBudget();
+    this.dirty = true;
+    this.emitRaw();
+  }
+
+  private addWidget(id: string, initialScore?: number): void {
     if (this.widgets.has(id)) {
       throw new Error(`Widget "${id}" is already registered`);
     }
@@ -78,7 +96,6 @@ export class BehaviouralEngine {
       initialScore: score,
       hasExplicitInitial: initialScore !== undefined,
     });
-    this.dirty = true;
   }
 
   record(id: string): void {
@@ -225,6 +242,26 @@ export class BehaviouralEngine {
     this.dirty = false;
   }
 
+  /** Scales scores down proportionally if their sum exceeds the budget. Never scales up.
+   *  Uninteracted widgets are reset to initialScore to preserve registration ratios.
+   *  Interacted widgets keep their earned scores. */
+  private clampToBudget(): void {
+    const entries = [...this.widgets.values()];
+    if (entries.length === 0) return;
+    for (const entry of entries) {
+      if (entry.clicks === 0) {
+        entry.score = entry.initialScore;
+      }
+    }
+    const sum = entries.reduce((s, w) => s + w.score, 0);
+    if (sum > this.config.budget) {
+      const factor = this.config.budget / sum;
+      for (const entry of entries) {
+        entry.score *= factor;
+      }
+    }
+  }
+
   private normalizeScores(): void {
     const entries = [...this.widgets.values()];
     if (entries.length === 0) return;
@@ -251,6 +288,14 @@ export class BehaviouralEngine {
 
   private emit(): void {
     const states = this.getState();
+    for (const listener of this.listeners) {
+      listener(states);
+    }
+  }
+
+  /** Emits current state to listeners without triggering normalization. */
+  private emitRaw(): void {
+    const states = [...this.widgets.values()].map((w) => this.toWidgetState(w));
     for (const listener of this.listeners) {
       listener(states);
     }

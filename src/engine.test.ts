@@ -73,6 +73,49 @@ describe('BehaviouralEngine', () => {
       engine.register('a');
       expect(() => engine.register('a')).toThrow('already registered');
     });
+
+    it('batch registers all widgets with a single emit', () => {
+      const engine = new BehaviouralEngine({ budget: 100 });
+      const cb = vi.fn();
+      engine.on('change', cb);
+
+      engine.register([
+        { id: 'a', initialScore: 60 },
+        { id: 'b', initialScore: 30 },
+        { id: 'c', initialScore: 10 },
+      ]);
+
+      // Single emit, not three
+      expect(cb).toHaveBeenCalledTimes(1);
+      expect(cb.mock.calls[0][0]).toHaveLength(3);
+
+      // Scores preserved — no intermediate clamping distortion
+      expect(engine.getWidget('a').score).toBeCloseTo(60);
+      expect(engine.getWidget('b').score).toBeCloseTo(30);
+      expect(engine.getWidget('c').score).toBeCloseTo(10);
+      expect(sumScores(engine)).toBeCloseTo(100);
+    });
+
+    it('batch register clamps when sum exceeds budget', () => {
+      const engine = new BehaviouralEngine({ budget: 100 });
+      engine.register([
+        { id: 'a', initialScore: 60 },
+        { id: 'b', initialScore: 80 },
+        { id: 'c', initialScore: 10 },
+      ]);
+
+      // 60:80:10 ratio normalized to 100
+      expect(engine.getWidget('a').score).toBeCloseTo(40);
+      expect(engine.getWidget('b').score).toBeCloseTo(53.33);
+      expect(engine.getWidget('c').score).toBeCloseTo(6.67);
+    });
+
+    it('batch register throws on duplicate within batch', () => {
+      const engine = new BehaviouralEngine();
+      expect(() => engine.register([{ id: 'a' }, { id: 'a' }])).toThrow(
+        'already registered',
+      );
+    });
   });
 
   describe('record', () => {
@@ -376,6 +419,49 @@ describe('BehaviouralEngine', () => {
       expect(cb.mock.calls[0][0]).toHaveLength(2);
     });
 
+    it('emits change on register', () => {
+      const engine = new BehaviouralEngine();
+      const cb = vi.fn();
+      engine.on('change', cb);
+      engine.register('a', 40);
+      engine.register('b', 60);
+      expect(cb).toHaveBeenCalledTimes(2);
+      // Last emission should contain both widgets
+      expect(cb.mock.calls[1][0]).toHaveLength(2);
+    });
+
+    it('register emits without distorting pre-seeded scores', () => {
+      const engine = new BehaviouralEngine({ budget: 100 });
+      engine.register('a', 60);
+      engine.register('b', 30);
+      engine.register('c', 10);
+      // Scores sum to exactly 100 — no distortion from intermediate normalization
+      expect(engine.getWidget('a').score).toBeCloseTo(60);
+      expect(engine.getWidget('b').score).toBeCloseTo(30);
+      expect(engine.getWidget('c').score).toBeCloseTo(10);
+    });
+
+    it('register clamps scores when sum exceeds budget', () => {
+      const engine = new BehaviouralEngine({ budget: 100 });
+      engine.register('a', 80);
+      engine.register('b', 80);
+      // Total was 160, clamped proportionally to 100
+      expect(sumScores(engine)).toBeCloseTo(100);
+      expect(engine.getWidget('a').score).toBeCloseTo(50);
+      expect(engine.getWidget('b').score).toBeCloseTo(50);
+    });
+
+    it('register preserves score ratios when sum exceeds budget', () => {
+      const engine = new BehaviouralEngine({ budget: 100 });
+      engine.register('a', 60);
+      engine.register('b', 80);
+      engine.register('c', 10);
+      // Original ratio 60:80:10 normalized to budget 100
+      expect(engine.getWidget('a').score).toBeCloseTo(40);
+      expect(engine.getWidget('b').score).toBeCloseTo(53.33);
+      expect(engine.getWidget('c').score).toBeCloseTo(6.67);
+    });
+
     it('emits change on import', () => {
       const engine = new BehaviouralEngine();
       engine.register('a');
@@ -542,6 +628,29 @@ describe('BehaviouralEngine', () => {
       // getState() triggers ensureNormalized() which sets dirty = false
       const sum = sumScores(engine);
       expect(sum).toBeCloseTo(100);
+    });
+
+    it('preserves score differentiation after late registration', () => {
+      const engine = new BehaviouralEngine({ budget: 100, increment: 10 });
+      engine.register('a');
+      engine.register('b');
+
+      // Click a several times to build a clear advantage
+      engine.record('a');
+      engine.record('a');
+      engine.record('a');
+
+      const aBeforeReg = engine.getWidget('a').score;
+      const bBeforeReg = engine.getWidget('b').score;
+      expect(aBeforeReg).toBeGreaterThan(bBeforeReg);
+
+      // Late registration should not destroy earned differentiation
+      engine.register('c');
+
+      expect(engine.getWidget('a').score).toBeGreaterThan(
+        engine.getWidget('b').score,
+      );
+      expect(sumScores(engine)).toBeCloseTo(100);
     });
   });
 
