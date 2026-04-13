@@ -44,6 +44,7 @@ export class BehaviouralEngine {
 
   constructor(config?: Partial<BehaviouralEngineConfig>) {
     this.config = { ...DEFAULTS, ...config };
+    this.config.variants = [...this.config.variants];
     if (this.config.variants.length === 0) {
       throw new Error('variants must contain at least one entry');
     }
@@ -68,6 +69,21 @@ export class BehaviouralEngine {
     initialScore?: number,
   ): void {
     if (Array.isArray(idOrWidgets)) {
+      const seen = new Set<string>();
+      for (const w of idOrWidgets) {
+        if (this.widgets.has(w.id) || seen.has(w.id)) {
+          throw new Error(`Widget "${w.id}" is already registered`);
+        }
+        if (
+          w.initialScore !== undefined &&
+          (!Number.isFinite(w.initialScore) || w.initialScore < 0)
+        ) {
+          throw new Error(
+            `initialScore must be a finite non-negative number, got: ${w.initialScore}`,
+          );
+        }
+        seen.add(w.id);
+      }
       for (const w of idOrWidgets) {
         this.addWidget(w.id, w.initialScore);
       }
@@ -75,7 +91,7 @@ export class BehaviouralEngine {
       this.addWidget(idOrWidgets, initialScore);
     }
     this.clampToBudget();
-    this.emitRaw();
+    this.emitChange();
   }
 
   private addWidget(id: string, initialScore?: number): void {
@@ -128,7 +144,7 @@ export class BehaviouralEngine {
     }
 
     this.normalizeScores();
-    this.emit();
+    this.emitChange();
   }
 
   getState(): WidgetState[] {
@@ -193,7 +209,7 @@ export class BehaviouralEngine {
       ? state.lastInteraction
       : 0;
     this.normalizeScores();
-    this.emit();
+    this.emitChange();
   }
 
   reset(): void {
@@ -203,7 +219,7 @@ export class BehaviouralEngine {
     }
     this.lastInteraction = 0;
     this.normalizeScores();
-    this.emit();
+    this.emitChange();
   }
 
   on(event: 'change', cb: ChangeListener): void {
@@ -241,13 +257,15 @@ export class BehaviouralEngine {
   }
 
   /** Scales scores down proportionally if their sum exceeds the budget. Never scales up.
-   *  Uninteracted widgets are reset to initialScore to preserve registration ratios.
-   *  Interacted widgets keep their earned scores. */
+   *  Before any interactions, widgets are reset to initialScore to preserve registration
+   *  ratios across sequential register() calls. Once interactions have occurred, all
+   *  earned scores are respected. */
   private clampToBudget(): void {
     const entries = [...this.widgets.values()];
     if (entries.length === 0) return;
-    for (const entry of entries) {
-      if (entry.clicks === 0) {
+    const hasInteractions = entries.some((e) => e.clicks > 0);
+    if (!hasInteractions) {
+      for (const entry of entries) {
         entry.score = entry.initialScore;
       }
     }
@@ -284,21 +302,14 @@ export class BehaviouralEngine {
     }
   }
 
-  private emit(): void {
-    const states = this.getState();
-    for (const listener of this.listeners) {
-      listener(states);
-    }
-  }
-
-  /** Emits current state to listeners without normalizing scores to the budget.
-   *  Used by register() to emit pre-normalization state: scores sum to ≤ budget
-   *  (clamped down if they exceeded it, left as-is otherwise). Full normalization
-   *  to exactly the budget happens on the next getState() or record() call. */
-  private emitRaw(): void {
+  private emitChange(): void {
     const states = [...this.widgets.values()].map((w) => this.toWidgetState(w));
     for (const listener of this.listeners) {
-      listener(states);
+      try {
+        listener(states);
+      } catch {
+        /* listener errors must not break the emission chain */
+      }
     }
   }
 }

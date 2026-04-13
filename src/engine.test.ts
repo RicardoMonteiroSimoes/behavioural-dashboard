@@ -71,6 +71,15 @@ describe('BehaviouralEngine', () => {
         'growthRate must be a finite positive number',
       );
     });
+
+    it('does not share variants array reference with caller', () => {
+      const variants = ['small', 'medium', 'large'];
+      const engine = new BehaviouralEngine({ variants });
+      variants[2] = 'MUTATED';
+      engine.register('a');
+      // single widget = weight 1.0 → last variant, which must still be 'large'
+      expect(engine.getWidget('a').variant).toBe('large');
+    });
   });
 
   describe('register', () => {
@@ -160,6 +169,29 @@ describe('BehaviouralEngine', () => {
       expect(() => engine.register([{ id: 'a' }, { id: 'a' }])).toThrow(
         'already registered',
       );
+    });
+
+    it('batch register is atomic — no partial state on failure', () => {
+      const engine = new BehaviouralEngine({ budget: 100 });
+      engine.register('a', 60);
+      engine.register('b', 40);
+      const cb = vi.fn();
+      engine.on('change', cb);
+
+      expect(() =>
+        engine.register([
+          { id: 'c', initialScore: 30 },
+          { id: 'a', initialScore: 20 }, // duplicate
+        ]),
+      ).toThrow('already registered');
+
+      // 'c' must not have been added
+      expect(() => engine.getWidget('c')).toThrow('not registered');
+      // Original widgets must be unchanged
+      expect(engine.getWidget('a').score).toBeCloseTo(60);
+      expect(engine.getWidget('b').score).toBeCloseTo(40);
+      // No change event should have fired
+      expect(cb).not.toHaveBeenCalled();
     });
   });
 
@@ -801,6 +833,22 @@ describe('BehaviouralEngine', () => {
       );
       expect(sumScores(engine)).toBeCloseTo(100);
     });
+
+    it('late registration does not resurrect drained widgets', () => {
+      const engine = new BehaviouralEngine({ budget: 100, increment: 5 });
+      engine.register('a', 90);
+      engine.register('b', 10);
+
+      // Drain b to near-zero by clicking a repeatedly
+      for (let i = 0; i < 10; i++) engine.record('a');
+      const bScore = engine.getWidget('b').score;
+      expect(bScore).toBeLessThan(1);
+
+      // Late registration must not resurrect b
+      engine.register('c');
+      expect(engine.getWidget('b').score).toBeLessThanOrEqual(bScore);
+      expect(sumScores(engine)).toBeCloseTo(100);
+    });
   });
 
   describe('register() input validation', () => {
@@ -870,6 +918,22 @@ describe('BehaviouralEngine', () => {
       engine.record('solo');
       expect(engine.getWidget('solo').score).toBeCloseTo(100);
       expect(engine.getWidget('solo').weight).toBeCloseTo(1);
+    });
+
+    it('a throwing listener does not prevent other listeners from firing', () => {
+      const engine = new BehaviouralEngine({ budget: 100 });
+      engine.register('a');
+      engine.register('b');
+
+      const order: string[] = [];
+      engine.on('change', () => order.push('first'));
+      engine.on('change', () => {
+        throw new Error('boom');
+      });
+      engine.on('change', () => order.push('third'));
+
+      engine.record('a');
+      expect(order).toEqual(['first', 'third']);
     });
 
     it('does not crash when a listener removes itself during emission', () => {
