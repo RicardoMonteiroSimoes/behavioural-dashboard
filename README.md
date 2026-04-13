@@ -172,7 +172,7 @@ Unsubscribes a previously registered listener.
 
 ### `destroy(): void`
 
-Removes all listeners. Call this when tearing down a component to prevent memory leaks.
+Tears down the engine: removes all listeners, clears all widget state, and resets the last-interaction timestamp. The instance can be reused by calling `register()` again. Call this when tearing down a component to prevent memory leaks.
 
 ## WidgetState shape
 

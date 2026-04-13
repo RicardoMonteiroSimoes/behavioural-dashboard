@@ -618,7 +618,9 @@ describe('BehaviouralEngine', () => {
       const cb = vi.fn();
       engine.on('change', cb);
       engine.destroy();
-      engine.record('a');
+
+      // After destroy, widgets are cleared — re-register and interact
+      engine.register('a');
       expect(cb).not.toHaveBeenCalled();
     });
   });
@@ -955,6 +957,64 @@ describe('BehaviouralEngine', () => {
       // Listener was removed; a second record must not call it again
       engine.record('b');
       expect(callCount).toBe(1);
+    });
+
+    it('getState returns widgets in registration order', () => {
+      const engine = new BehaviouralEngine({ budget: 100 });
+      engine.register('c');
+      engine.register('a');
+      engine.register('b');
+
+      // Interact to shuffle scores — order must still be registration order
+      engine.record('b');
+      engine.record('b');
+      engine.record('a');
+
+      const ids = engine.getState().map((s) => s.id);
+      expect(ids).toEqual(['c', 'a', 'b']);
+    });
+
+    it('a listener added during emission is not called in the same cycle', () => {
+      const engine = new BehaviouralEngine({ budget: 100 });
+      engine.register('a');
+      engine.register('b');
+
+      let lateCallCount = 0;
+      const lateListener = () => lateCallCount++;
+
+      engine.on('change', () => {
+        engine.on('change', lateListener);
+      });
+
+      engine.record('a');
+      expect(lateCallCount).toBe(0);
+
+      // But it fires on the next emission
+      engine.record('b');
+      expect(lateCallCount).toBe(1);
+    });
+
+    it('destroy fully tears down the engine', () => {
+      const engine = new BehaviouralEngine({ budget: 100 });
+      engine.register('a');
+      engine.register('b');
+
+      let called = false;
+      engine.on('change', () => {
+        called = true;
+      });
+
+      engine.destroy();
+
+      // Listeners are gone
+      expect(called).toBe(false);
+
+      // Widgets are gone — getState returns empty
+      expect(engine.getState()).toEqual([]);
+
+      // register works again on a destroyed engine (clean slate)
+      engine.register('x');
+      expect(engine.getState()).toHaveLength(1);
     });
 
     it('maintains budget invariant with 100 widgets and 200 random interactions', () => {

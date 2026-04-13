@@ -238,6 +238,8 @@ export class BehaviouralEngine {
 
   destroy(): void {
     this.listeners.clear();
+    this.widgets.clear();
+    this.lastInteraction = 0;
   }
 
   private toWidgetState(entry: WidgetEntry): WidgetState {
@@ -304,7 +306,7 @@ export class BehaviouralEngine {
 
   private emitChange(): void {
     const states = [...this.widgets.values()].map((w) => this.toWidgetState(w));
-    for (const listener of this.listeners) {
+    for (const listener of [...this.listeners]) {
       try {
         listener(states);
       } catch {
