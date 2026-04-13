@@ -58,7 +58,9 @@ engine.on('change', (states) => {
 
 ### Zero-sum budget scoring
 
-A fixed **budget** (default: `100`) is shared across all registered widgets. Scores always sum to exactly the budget. When a widget is interacted with, it gains points drained proportionally from every other widget — widgets that hold more score lose more than those that hold less.
+A fixed **budget** (default: `100`) is shared across all registered widgets. Scores always sum to exactly the budget after normalization. When a widget is interacted with, it gains points drained proportionally from every other widget — widgets that hold more score lose more than those that hold less.
+
+> **Note:** Normalization to the full budget is lazy — it happens on the next `getState()` or `record()` call, not during `register()`. The `'change'` event fired by `register()` may emit scores that sum to less than the budget when explicit initial scores don't fill it. If scores exceed the budget they are clamped down immediately.
 
 ### Proportional drain redistribution
 
@@ -100,9 +102,11 @@ A smaller `growthRate` makes variants unlock at lower weights (faster progressio
 Registering widgets with explicit initial scores sets a default layout:
 
 ```typescript
-engine.register('primary',   50);  // starts prominent
-engine.register('secondary', 30);
-engine.register('tertiary',  20);  // starts small
+engine.register([
+  { id: 'primary',   initialScore: 50 },  // starts prominent
+  { id: 'secondary', initialScore: 30 },
+  { id: 'tertiary',  initialScore: 20 },  // starts small
+]);
 ```
 
 If no initial scores are given, all widgets start at `0` and receive an equal share on first normalization. `reset()` always returns to those initial values.
