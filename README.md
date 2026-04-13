@@ -39,9 +39,9 @@ engine.record('orders');
 // Read state (returned in registration order)
 const states = engine.getState();
 // [
-//   { id: 'orders', score: 43.2, weight: 0.432, clicks: 1, variant: 'standard' },
-//   { id: 'fleet',  score: 32.1, weight: 0.321, clicks: 0, variant: 'compact'  },
-//   { id: 'alerts', score: 24.7, weight: 0.247, clicks: 0, variant: 'compact'  },
+//   { id: 'orders', score: 45.0, weight: 0.450, clicks: 1, variant: 'expanded' },
+//   { id: 'fleet',  score: 32.1, weight: 0.321, clicks: 0, variant: 'standard' },
+//   { id: 'alerts', score: 22.9, weight: 0.229, clicks: 0, variant: 'standard' },
 // ]
 
 // Subscribe to changes
