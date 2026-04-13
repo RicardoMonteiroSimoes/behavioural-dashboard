@@ -27,9 +27,11 @@ const engine = new BehaviouralEngine({
 });
 
 // Register widgets — optionally with initial scores for a pre-seeded layout
-engine.register('orders', 40);
-engine.register('fleet', 35);
-engine.register('alerts', 25);
+engine.register([
+  { id: 'orders', initialScore: 40 },
+  { id: 'fleet', initialScore: 35 },
+  { id: 'alerts', initialScore: 25 },
+]);
 
 // Record an interaction
 engine.record('orders');
@@ -123,13 +125,14 @@ All options are optional. The constructor throws if `budget`, `increment`, or `g
 Creates a new engine. All config fields are optional and fall back to defaults.
 
 ### `register(id: string, initialScore?: number): void`
+### `register(widgets: { id: string; initialScore?: number }[]): void`
 
-Registers a widget. Throws if `id` is already registered. Does not emit a `'change'` event.
+Registers one or more widgets and fires a single `'change'` event. Throws if any `id` is already registered. If the total exceeds the budget, all scores are scaled down proportionally to fit — scores express relative importance, not absolute values. Scores that sum to less than or equal to the budget are left as-is; full normalization to exactly the budget happens on the next `getState()` or `record()` call.
 
-If `initialScore` is omitted the widget starts at score `0`. What happens next depends on the mix of registered widgets:
+The batch overload is preferred when registering multiple widgets at once — it emits a single fully-formed state instead of intermediate snapshots.
 
-- **All widgets have score 0** (no explicit initial scores anywhere): on first normalization they receive an equal share of the budget.
-- **Some widgets have explicit scores**: the scoreless widget stays at `0` until other widgets are interacted with; it then receives budget share proportionally through normalization, but it does not get an automatic equal slice.
+- **All widgets have score 0** (no explicit initial scores anywhere): they receive an equal share of the budget.
+- **Some widgets have explicit scores**: the scoreless widget stays at `0` and does not receive an automatic equal slice.
 
 ### `record(id: string): void`
 
@@ -157,7 +160,7 @@ Resets all widgets to their initial scores and zeroes click counts. Fires `'chan
 
 ### `on(event: 'change', cb: (states: WidgetState[]) => void): void`
 
-Subscribes to state changes. `cb` is called after every `record`, `import`, and `reset`.
+Subscribes to state changes. `cb` is called after every `register`, `record`, `import`, and `reset`.
 
 ### `off(event: 'change', cb: (states: WidgetState[]) => void): void`
 
@@ -212,6 +215,119 @@ Recommended CSS transitions so size and style changes animate smoothly:
 ```css
 .widget {
   transition: flex-grow 0.4s ease, min-height 0.4s ease;
+}
+```
+
+## Framework integration
+
+### React
+
+```tsx
+import { useEffect, useState } from 'react';
+import { BehaviouralEngine } from 'behavioural-dashboard';
+import type { WidgetState } from 'behavioural-dashboard';
+
+function Dashboard() {
+  // 1. Create engine + register widgets in a useState initializer.
+  //    Runs once, Strict Mode safe.
+  const [engine] = useState(() => {
+    const e = new BehaviouralEngine({
+      budget: 100,         // total score pool
+      increment: 5,        // points transferred per click
+      growthRate: 0.2,     // weight step per variant tier
+      variants: ['compact', 'standard', 'expanded'],
+    });
+    e.register([
+      { id: 'orders', initialScore: 40 },
+      { id: 'fleet',  initialScore: 35 },
+      { id: 'alerts', initialScore: 25 },
+    ]);
+    return e;
+  });
+
+  // 2. Seed state from engine, then keep it in sync via the change event.
+  const [states, setStates] = useState(() => engine.getState());
+
+  useEffect(() => {
+    engine.on('change', setStates);
+    return () => engine.off('change', setStates);
+  }, [engine]);
+
+  // 3. Render — variant drives CSS, weight drives size, record() on click.
+  return (
+    <main style={{ display: 'flex', gap: 8 }}>
+      {states.map((s) => (
+        <Widget key={s.id} state={s} onClick={() => engine.record(s.id)} />
+      ))}
+    </main>
+  );
+}
+
+// Each widget maps engine state to visual output.
+// Use state.variant for CSS classes, state.weight for proportional sizing.
+function Widget({ state, onClick }: { state: WidgetState; onClick: () => void }) {
+  return (
+    <article
+      className={`widget widget--${state.variant}`}
+      style={{ flexGrow: state.weight }}
+      onClick={onClick}
+    >
+      <h3>{state.id}</h3>
+      <span>{state.score.toFixed(1)}</span>
+    </article>
+  );
+}
+```
+
+### Angular
+
+```typescript
+import { Component, OnDestroy, signal } from '@angular/core';
+import { BehaviouralEngine } from 'behavioural-dashboard';
+
+@Component({
+  selector: 'app-dashboard',
+  standalone: true,
+  // variant drives CSS classes, weight drives proportional sizing.
+  // record() on click — the signal re-renders the template automatically.
+  template: `
+    <main style="display: flex; gap: 8px">
+      @for (s of states(); track s.id) {
+        <article
+          [class]="'widget widget--' + s.variant"
+          [style.flex-grow]="s.weight"
+          (click)="engine.record(s.id)">
+          <h3>{{ s.id }}</h3>
+          <span>{{ s.score.toFixed(1) }}</span>
+        </article>
+      }
+    </main>
+  `,
+})
+export class DashboardComponent implements OnDestroy {
+  // 1. Create the engine.
+  engine = new BehaviouralEngine({
+    budget: 100,         // total score pool
+    increment: 5,        // points transferred per click
+    growthRate: 0.2,     // weight step per variant tier
+    variants: ['compact', 'standard', 'expanded'],
+  });
+
+  // 2. A signal that holds the current widget states — drives the template.
+  states = signal(this.engine.getState());
+
+  constructor() {
+    // 3. Wire the engine's change event to the signal, then register widgets.
+    this.engine.on('change', (s) => this.states.set(s));
+
+    this.engine.register([
+      { id: 'orders', initialScore: 40 },
+      { id: 'fleet',  initialScore: 35 },
+      { id: 'alerts', initialScore: 25 },
+    ]);
+  }
+
+  ngOnDestroy() { this.engine.destroy(); }
 }
 ```
 
