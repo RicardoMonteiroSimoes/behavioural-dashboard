@@ -20,28 +20,55 @@ describe('BehaviouralEngine', () => {
 
     it('throws on non-positive budget', () => {
       expect(() => new BehaviouralEngine({ budget: 0 })).toThrow(
-        'budget must be positive',
+        'budget must be a finite positive number',
       );
       expect(() => new BehaviouralEngine({ budget: -10 })).toThrow(
-        'budget must be positive',
+        'budget must be a finite positive number',
+      );
+    });
+
+    it('throws on non-finite budget', () => {
+      expect(() => new BehaviouralEngine({ budget: Infinity })).toThrow(
+        'budget must be a finite positive number',
+      );
+      expect(() => new BehaviouralEngine({ budget: NaN })).toThrow(
+        'budget must be a finite positive number',
       );
     });
 
     it('throws on non-positive increment', () => {
       expect(() => new BehaviouralEngine({ increment: 0 })).toThrow(
-        'increment must be positive',
+        'increment must be a finite positive number',
       );
       expect(() => new BehaviouralEngine({ increment: -1 })).toThrow(
-        'increment must be positive',
+        'increment must be a finite positive number',
+      );
+    });
+
+    it('throws on non-finite increment', () => {
+      expect(() => new BehaviouralEngine({ increment: Infinity })).toThrow(
+        'increment must be a finite positive number',
+      );
+      expect(() => new BehaviouralEngine({ increment: NaN })).toThrow(
+        'increment must be a finite positive number',
       );
     });
 
     it('throws on non-positive growthRate', () => {
       expect(() => new BehaviouralEngine({ growthRate: 0 })).toThrow(
-        'growthRate must be positive',
+        'growthRate must be a finite positive number',
       );
       expect(() => new BehaviouralEngine({ growthRate: -0.1 })).toThrow(
-        'growthRate must be positive',
+        'growthRate must be a finite positive number',
+      );
+    });
+
+    it('throws on non-finite growthRate', () => {
+      expect(() => new BehaviouralEngine({ growthRate: Infinity })).toThrow(
+        'growthRate must be a finite positive number',
+      );
+      expect(() => new BehaviouralEngine({ growthRate: NaN })).toThrow(
+        'growthRate must be a finite positive number',
       );
     });
   });
@@ -108,6 +135,24 @@ describe('BehaviouralEngine', () => {
       expect(engine.getWidget('a').score).toBeCloseTo(40);
       expect(engine.getWidget('b').score).toBeCloseTo(53.33);
       expect(engine.getWidget('c').score).toBeCloseTo(6.67);
+    });
+
+    it('handles all-zero explicit initial scores', () => {
+      const engine = new BehaviouralEngine({ budget: 100 });
+      engine.register([
+        { id: 'a', initialScore: 0 },
+        { id: 'b', initialScore: 0 },
+      ]);
+      // sum=0 → normalizeScores distributes equally on first read
+      const states = engine.getState();
+      expect(states[0].score).toBeCloseTo(50);
+      expect(states[1].score).toBeCloseTo(50);
+      expect(sumScores(engine)).toBeCloseTo(100);
+
+      // After reset: initialScores are explicit 0, so sum=0 → equal share again
+      engine.reset();
+      expect(engine.getWidget('a').score).toBeCloseTo(50);
+      expect(engine.getWidget('b').score).toBeCloseTo(50);
     });
 
     it('batch register throws on duplicate within batch', () => {
@@ -359,6 +404,46 @@ describe('BehaviouralEngine', () => {
       ).toThrow('Unsupported state version');
     });
 
+    it('preserves lastInteraction through roundtrip', () => {
+      const engine = new BehaviouralEngine();
+      engine.register('a');
+      engine.record('a');
+
+      const exported = engine.export();
+      expect(exported.lastInteraction).toBeGreaterThan(0);
+
+      const engine2 = new BehaviouralEngine();
+      engine2.register('a');
+      engine2.import(exported);
+
+      expect(engine2.export().lastInteraction).toBe(exported.lastInteraction);
+    });
+
+    it('reset after import restores initial scores', () => {
+      const engine = new BehaviouralEngine({ budget: 100 });
+      engine.register('a', 60);
+      engine.register('b', 40);
+
+      engine.import({
+        version: 1,
+        widgets: [
+          { id: 'a', score: 20, clicks: 5 },
+          { id: 'b', score: 80, clicks: 10 },
+        ],
+        lastInteraction: 999,
+      });
+
+      expect(engine.getWidget('a').score).toBeCloseTo(20);
+      expect(engine.getWidget('b').score).toBeCloseTo(80);
+
+      engine.reset();
+
+      expect(engine.getWidget('a').score).toBeCloseTo(60);
+      expect(engine.getWidget('b').score).toBeCloseTo(40);
+      expect(engine.getWidget('a').clicks).toBe(0);
+      expect(engine.getWidget('b').clicks).toBe(0);
+    });
+
     it('retains scores for widgets absent from imported state and normalizes budget', () => {
       const engine = new BehaviouralEngine({ budget: 100, increment: 5 });
       engine.register('a');
@@ -560,6 +645,52 @@ describe('BehaviouralEngine', () => {
       expect(engine.getWidget('a').clicks).toBe(0);
     });
 
+    it('defaults lastInteraction to 0 when non-finite', () => {
+      const engine = new BehaviouralEngine({ budget: 100 });
+      engine.register('a');
+
+      engine.import({
+        version: 1,
+        widgets: [{ id: 'a', score: 100, clicks: 0 }],
+        lastInteraction: NaN,
+      });
+      expect(engine.export().lastInteraction).toBe(0);
+
+      engine.import({
+        version: 1,
+        widgets: [{ id: 'a', score: 100, clicks: 0 }],
+        lastInteraction: Infinity,
+      });
+      expect(engine.export().lastInteraction).toBe(0);
+    });
+
+    it('throws when imported widgets is not an array', () => {
+      const engine = new BehaviouralEngine({ budget: 100 });
+      engine.register('a');
+      expect(() =>
+        engine.import({
+          version: 1,
+          widgets: 'not-an-array' as never,
+          lastInteraction: 0,
+        }),
+      ).toThrow('widgets must be an array');
+    });
+
+    it('skips null or non-object entries in widgets array', () => {
+      const engine = new BehaviouralEngine({ budget: 100 });
+      engine.register('a');
+
+      // Should not throw — null and primitive entries are silently skipped
+      engine.import({
+        version: 1,
+        widgets: [null, 42, 'bad', { id: 'a', score: 100, clicks: 0 }] as never,
+        lastInteraction: 0,
+      });
+
+      // The valid entry should still be applied
+      expect(engine.getWidget('a').score).toBeCloseTo(100);
+    });
+
     it('skips widgets with negative clicks', () => {
       const engine = new BehaviouralEngine({ budget: 100 });
       engine.register('a');
@@ -625,9 +756,27 @@ describe('BehaviouralEngine', () => {
       // Register a third widget after interactions have already happened
       engine.register('c');
 
-      // getState() triggers ensureNormalized() which sets dirty = false
       const sum = sumScores(engine);
       expect(sum).toBeCloseTo(100);
+    });
+
+    it('respects explicit initial score on late registration', () => {
+      const engine = new BehaviouralEngine({ budget: 100, increment: 10 });
+      engine.register('a');
+      engine.register('b');
+
+      engine.record('a');
+      engine.record('a');
+      engine.record('a');
+
+      // Register c with explicit score after interactions
+      engine.register('c', 20);
+
+      expect(sumScores(engine)).toBeCloseTo(100);
+      // a still leads b (earned advantage preserved)
+      expect(engine.getWidget('a').score).toBeGreaterThan(
+        engine.getWidget('b').score,
+      );
     });
 
     it('preserves score differentiation after late registration', () => {

@@ -41,21 +41,23 @@ export class BehaviouralEngine {
   private readonly widgets = new Map<string, WidgetEntry>();
   private readonly listeners = new Set<ChangeListener>();
   private lastInteraction = 0;
-  private dirty = true;
 
   constructor(config?: Partial<BehaviouralEngineConfig>) {
     this.config = { ...DEFAULTS, ...config };
     if (this.config.variants.length === 0) {
       throw new Error('variants must contain at least one entry');
     }
-    if (this.config.budget <= 0) {
-      throw new Error('budget must be positive');
+    if (!Number.isFinite(this.config.budget) || this.config.budget <= 0) {
+      throw new Error('budget must be a finite positive number');
     }
-    if (this.config.growthRate <= 0) {
-      throw new Error('growthRate must be positive');
+    if (
+      !Number.isFinite(this.config.growthRate) ||
+      this.config.growthRate <= 0
+    ) {
+      throw new Error('growthRate must be a finite positive number');
     }
-    if (this.config.increment <= 0) {
-      throw new Error('increment must be positive');
+    if (!Number.isFinite(this.config.increment) || this.config.increment <= 0) {
+      throw new Error('increment must be a finite positive number');
     }
   }
 
@@ -73,7 +75,6 @@ export class BehaviouralEngine {
       this.addWidget(idOrWidgets, initialScore);
     }
     this.clampToBudget();
-    this.dirty = true;
     this.emitRaw();
   }
 
@@ -104,7 +105,7 @@ export class BehaviouralEngine {
       throw new Error(`Widget "${id}" is not registered`);
     }
 
-    this.ensureNormalized();
+    this.normalizeScores();
     widget.clicks++;
     this.lastInteraction = Date.now();
 
@@ -131,12 +132,12 @@ export class BehaviouralEngine {
   }
 
   getState(): WidgetState[] {
-    this.ensureNormalized();
+    this.normalizeScores();
     return [...this.widgets.values()].map((w) => this.toWidgetState(w));
   }
 
   getWidget(id: string): WidgetState {
-    this.ensureNormalized();
+    this.normalizeScores();
     const widget = this.widgets.get(id);
     if (!widget) {
       throw new Error(`Widget "${id}" is not registered`);
@@ -145,7 +146,7 @@ export class BehaviouralEngine {
   }
 
   export(): AdaptiveState {
-    this.ensureNormalized();
+    this.normalizeScores();
     return {
       version: 1,
       widgets: [...this.widgets.values()].map((w) => ({
@@ -169,7 +170,11 @@ export class BehaviouralEngine {
     if (state.version !== 1) {
       throw new Error(`Unsupported state version: ${state.version}`);
     }
+    if (!Array.isArray(state.widgets)) {
+      throw new Error('Invalid state: widgets must be an array');
+    }
     for (const ws of state.widgets) {
+      if (ws == null || typeof ws !== 'object') continue;
       const widget = this.widgets.get(ws.id);
       if (widget) {
         // Only update widgets that exist in this engine; unknown ids are ignored.
@@ -197,8 +202,7 @@ export class BehaviouralEngine {
       widget.clicks = 0;
     }
     this.lastInteraction = 0;
-    this.dirty = true;
-    this.ensureNormalized();
+    this.normalizeScores();
     this.emit();
   }
 
@@ -234,12 +238,6 @@ export class BehaviouralEngine {
       clicks: entry.clicks,
       variant: variants[variantIndex],
     };
-  }
-
-  private ensureNormalized(): void {
-    if (!this.dirty) return;
-    this.normalizeScores();
-    this.dirty = false;
   }
 
   /** Scales scores down proportionally if their sum exceeds the budget. Never scales up.
@@ -293,7 +291,10 @@ export class BehaviouralEngine {
     }
   }
 
-  /** Emits current state to listeners without triggering normalization. */
+  /** Emits current state to listeners without normalizing scores to the budget.
+   *  Used by register() to emit pre-normalization state: scores sum to ≤ budget
+   *  (clamped down if they exceeded it, left as-is otherwise). Full normalization
+   *  to exactly the budget happens on the next getState() or record() call. */
   private emitRaw(): void {
     const states = [...this.widgets.values()].map((w) => this.toWidgetState(w));
     for (const listener of this.listeners) {
